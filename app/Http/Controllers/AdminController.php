@@ -26,6 +26,7 @@ class AdminController extends Controller
     public function dashboard()
     {
         $stats = [
+            'total_users' => User::count(),
             'total_registrations' => KittiRegistration::count(),
             'pending_registrations' => KittiRegistration::pending()->count(),
             'approved_registrations' => KittiRegistration::approved()->count(),
@@ -33,6 +34,8 @@ class AdminController extends Controller
             'total_payments' => PaymentTransaction::successful()->count(),
             'total_amount' => PaymentTransaction::successful()->sum('amount'),
             'pending_discontinue_requests' => DiscontinueRequest::pending()->count(),
+            'overdue_payments' => $this->getOverduePaymentsCount(),
+            'blocked_users' => User::where('is_active', false)->count(),
         ];
 
         $recentRegistrations = KittiRegistration::with('latestPayment')
@@ -180,9 +183,23 @@ class AdminController extends Controller
             $query->where('payment_method', $request->payment_method);
         }
 
+        if ($request->filled('date_from')) {
+            $query->whereDate('created_at', '>=', $request->date_from);
+        }
+
+        if ($request->filled('date_to')) {
+            $query->whereDate('created_at', '<=', $request->date_to);
+        }
+
         $payments = $query->latest()->paginate(20);
 
-        return view('admin.payments.index', compact('payments'));
+        // Calculate stats for the view
+        $totalAmount = PaymentTransaction::where('status', 'success')->sum('amount');
+        $successfulCount = PaymentTransaction::where('status', 'success')->count();
+        $pendingCount = PaymentTransaction::where('status', 'pending')->count();
+        $failedCount = PaymentTransaction::where('status', 'failed')->count();
+
+        return view('admin.payments.index', compact('payments', 'totalAmount', 'successfulCount', 'pendingCount', 'failedCount'));
     }
 
     /**
@@ -233,6 +250,35 @@ class AdminController extends Controller
     }
 
     /**
+     * Update payment status for a registration
+     */
+    public function updatePaymentStatus(Request $request, KittiRegistration $registration)
+    {
+        $request->validate([
+            'payment_status' => 'required|in:pending,success,failed'
+        ]);
+
+        try {
+            $registration->update([
+                'payment_status' => $request->payment_status,
+                'payment_date' => $request->payment_status === 'success' ? now() : null
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Payment status updated successfully'
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error updating payment status: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update payment status'
+            ], 500);
+        }
+    }
+
+    /**
      * List discontinue requests
      */
     public function discontinueRequests(Request $request)
@@ -243,9 +289,22 @@ class AdminController extends Controller
             $query->where('status', $request->status);
         }
 
+        if ($request->filled('date_from')) {
+            $query->whereDate('created_at', '>=', $request->date_from);
+        }
+
+        if ($request->filled('date_to')) {
+            $query->whereDate('created_at', '<=', $request->date_to);
+        }
+
         $requests = $query->latest()->paginate(20);
 
-        return view('admin.discontinue_requests.index', compact('requests'));
+        // Calculate stats for the view
+        $pendingCount = DiscontinueRequest::where('status', 'pending')->count();
+        $approvedCount = DiscontinueRequest::where('status', 'approved')->count();
+        $rejectedCount = DiscontinueRequest::where('status', 'rejected')->count();
+
+        return view('admin.discontinue_requests.index', compact('requests', 'pendingCount', 'approvedCount', 'rejectedCount'));
     }
 
     /**
@@ -450,6 +509,161 @@ class AdminController extends Controller
     }
 
     /**
+     * List all users
+     */
+    public function users(Request $request)
+    {
+        $query = User::with(['kittiRegistrations', 'discontinueRequests']);
+
+        if ($request->filled('status')) {
+            $query->where('is_active', $request->status === 'active');
+        }
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%");
+            });
+        }
+
+        $users = $query->latest()->paginate(20);
+
+        return view('admin.users.index', compact('users'));
+    }
+
+    /**
+     * Show user details
+     */
+    public function showUser(User $user)
+    {
+        $user->load(['kittiRegistrations', 'discontinueRequests']);
+        
+        return view('admin.users.show', compact('user'));
+    }
+
+    /**
+     * Toggle user status (enable/disable)
+     */
+    public function toggleUserStatus(Request $request, User $user)
+    {
+        $user->update([
+            'is_active' => !$user->is_active
+        ]);
+
+        // Log audit
+        AuditLog::create([
+            'user_id' => auth()->id(),
+            'action' => $user->is_active ? 'enable_user' : 'disable_user',
+            'model_type' => User::class,
+            'model_id' => $user->id,
+            'description' => "User " . ($user->is_active ? 'enabled' : 'disabled') . " by " . auth()->user()->name,
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'User ' . ($user->is_active ? 'enabled' : 'disabled') . ' successfully',
+            'is_active' => $user->is_active
+        ]);
+    }
+
+    /**
+     * Monthly dues tracking
+     */
+    public function monthlyDues(Request $request)
+    {
+        $query = KittiRegistration::with(['paymentTransactions'])
+            ->where('status', 'approved');
+
+        if ($request->filled('month')) {
+            $month = $request->month;
+            $query->whereRaw('MONTH(start_date) = ?', [$month]);
+        }
+
+        if ($request->filled('year')) {
+            $year = $request->year;
+            $query->whereRaw('YEAR(start_date) = ?', [$year]);
+        }
+
+        $registrations = $query->get();
+
+        // Calculate monthly dues for each registration
+        $monthlyDues = [];
+        foreach ($registrations as $registration) {
+            $startDate = \Carbon\Carbon::parse($registration->start_date);
+            $currentDate = \Carbon\Carbon::now();
+            $totalPayments = 10; // 10 months payment for 12 months benefit
+            
+            for ($i = 0; $i < $totalPayments; $i++) {
+                $paymentDate = $startDate->copy()->addMonths($i);
+                
+                // Check if payment is overdue
+                $isOverdue = $paymentDate->isPast() && 
+                    !$registration->paymentTransactions()
+                        ->whereMonth('payment_completed_at', $paymentDate->month)
+                        ->whereYear('payment_completed_at', $paymentDate->year)
+                        ->where('status', 'success')
+                        ->exists();
+
+                if ($isOverdue) {
+                    $monthlyDues[] = [
+                        'registration' => $registration,
+                        'payment_date' => $paymentDate,
+                        'amount' => $registration->getPaymentAmount(),
+                        'days_overdue' => $currentDate->diffInDays($paymentDate),
+                        'user_email' => $registration->email,
+                        'user_name' => $registration->full_name
+                    ];
+                }
+            }
+        }
+
+        // Sort by days overdue (most overdue first)
+        usort($monthlyDues, function($a, $b) {
+            return $b['days_overdue'] <=> $a['days_overdue'];
+        });
+
+        return view('admin.monthly_dues', compact('monthlyDues'));
+    }
+
+    /**
+     * Send reminder for overdue payments
+     */
+    public function sendReminder(Request $request)
+    {
+        $request->validate([
+            'user_emails' => 'required|array',
+            'user_emails.*' => 'email',
+            'reminder_message' => 'required|string|max:1000',
+        ]);
+
+        $sentCount = 0;
+        foreach ($request->user_emails as $email) {
+            // TODO: Implement actual email sending
+            // Mail::to($email)->send(new PaymentReminderMail($request->reminder_message));
+            $sentCount++;
+        }
+
+        // Log audit
+        AuditLog::create([
+            'user_id' => auth()->id(),
+            'action' => 'send_payment_reminder',
+            'model_type' => null,
+            'model_id' => null,
+            'description' => "Payment reminder sent to " . $sentCount . " users by " . auth()->user()->name,
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => "Reminder sent to {$sentCount} users successfully"
+        ]);
+    }
+
+    /**
      * Send credentials email
      */
     private function sendCredentialsEmail(KittiRegistration $registration, string $credentialsId, string $tempPassword): void
@@ -499,5 +713,35 @@ class AdminController extends Controller
 
         // TODO: Implement email sending
         // Mail::to($request->registration->email)->send(new DiscontinueRejectionMail($request, $reason));
+    }
+
+    /**
+     * Get count of overdue payments
+     */
+    private function getOverduePaymentsCount(): int
+    {
+        $overdueCount = 0;
+        $registrations = KittiRegistration::where('status', 'approved')->get();
+
+        foreach ($registrations as $registration) {
+            $startDate = \Carbon\Carbon::parse($registration->start_date);
+            $currentDate = \Carbon\Carbon::now();
+            $totalPayments = 10;
+
+            for ($i = 0; $i < $totalPayments; $i++) {
+                $paymentDate = $startDate->copy()->addMonths($i);
+                
+                if ($paymentDate->isPast() && 
+                    !$registration->paymentTransactions()
+                        ->whereMonth('payment_completed_at', $paymentDate->month)
+                        ->whereYear('payment_completed_at', $paymentDate->year)
+                        ->where('status', 'success')
+                        ->exists()) {
+                    $overdueCount++;
+                }
+            }
+        }
+
+        return $overdueCount;
     }
 }

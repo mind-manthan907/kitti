@@ -11,6 +11,7 @@ use Carbon\Carbon;
 class KittiRegistration extends Model
 {
     protected $fillable = [
+        'user_id',
         'full_name',
         'mobile',
         'email',
@@ -23,20 +24,14 @@ class KittiRegistration extends Model
         'duration_months',
         'start_date',
         'maturity_date',
+        'bank_account_holder_name',
         'bank_account_number',
         'bank_ifsc_code',
-        'bank_account_holder_name',
         'upi_id',
-        'status',
-        'rejection_reason',
-        'admin_credentials_id',
-        'admin_credentials_password',
-        'auto_confirm_at',
-        'approved_by',
-        'approved_at',
         'terms_accepted',
-        'form_step',
-        'form_data',
+        'status',
+        'payment_status',
+        'payment_date',
     ];
 
     protected $casts = [
@@ -163,6 +158,51 @@ class KittiRegistration extends Model
         return substr($username, 0, 1) . 
                str_repeat('*', strlen($username) - 2) . 
                substr($username, -1) . '@' . $provider;
+    }
+
+    /**
+     * Get payment status badge class
+     */
+    public function getPaymentStatusBadgeClassAttribute()
+    {
+        return match($this->payment_status) {
+            'success' => 'bg-green-100 text-green-800',
+            'failed' => 'bg-red-100 text-red-800',
+            'pending' => 'bg-yellow-100 text-yellow-800',
+            default => 'bg-gray-100 text-gray-800',
+        };
+    }
+
+    /**
+     * Get formatted payment date
+     */
+    public function getFormattedPaymentDateAttribute()
+    {
+        return $this->payment_date ? $this->payment_date->format('M d, Y') : 'Not paid yet';
+    }
+
+    /**
+     * Check if payment is successful
+     */
+    public function isPaymentSuccessful()
+    {
+        return $this->payment_status === 'success';
+    }
+
+    /**
+     * Check if payment is pending
+     */
+    public function isPaymentPending()
+    {
+        return $this->payment_status === 'pending';
+    }
+
+    /**
+     * Check if payment failed
+     */
+    public function isPaymentFailed()
+    {
+        return $this->payment_status === 'failed';
     }
 
     /**

@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Auth;
 
 class KittiRegistrationController extends Controller
 {
@@ -29,6 +30,112 @@ class KittiRegistrationController extends Controller
     public function create()
     {
         return view('registration.create');
+    }
+
+    /**
+     * Show investment plan form for logged-in users
+     */
+    public function showInvestmentPlanForm()
+    {
+        $user = Auth::user();
+        
+        // Check if user has verified KYC
+        if (!$user->hasVerifiedKyc()) {
+            if (!$user->hasKycDocument()) {
+                return redirect()->route('profile.kyc.create')
+                    ->with('warning', 'Please complete your KYC verification before creating an investment plan.');
+            } else {
+                return redirect()->route('profile.kyc.index')
+                    ->with('warning', 'Your KYC is pending verification. Please wait for admin approval.');
+            }
+        }
+        
+        // Check if user already has an active investment
+        $activeInvestment = $user->kittiRegistrations()
+            ->where('status', 'approved')
+            ->first();
+        if ($activeInvestment) {
+            return redirect()->route('user.dashboard')
+                ->with('warning', 'You already have an active investment plan.');
+        }
+        
+        // Get all active investment plans
+        $plans = \App\Models\InvestmentPlan::active()->orderBy('amount')->get();
+        return view('registration.investment_plan', compact('user', 'plans'));
+    }
+
+    /**
+     * Store investment plan for logged-in users
+     */
+    public function storeInvestmentPlan(Request $request)
+    {
+        $user = Auth::user();
+        
+        // Check if user has verified KYC
+        if (!$user->hasVerifiedKyc()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Please complete your KYC verification before creating an investment plan.'
+            ], 422);
+        }
+        
+        $request->validate([
+            'plan_id' => 'required|exists:investment_plans,id',
+            'duration_months' => 'required|integer|min:6|max:60',
+        ]);
+
+        try {
+            // Get the selected plan
+            $plan = \App\Models\InvestmentPlan::findOrFail($request->plan_id);
+
+            // Validate duration against plan constraints
+            if ($request->duration_months < $plan->min_duration_months || $request->duration_months > $plan->max_duration_months) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "Duration must be between {$plan->min_duration_months} and {$plan->max_duration_months} months for this plan."
+                ], 422);
+            }
+
+            // Calculate dates
+            $startDate = now();
+            $maturityDate = $startDate->copy()->addMonths($request->duration_months);
+
+            // Create the investment registration
+            $registration = KittiRegistration::create([
+                'user_id' => $user->id,
+                'full_name' => $user->name,
+                'mobile' => $user->mobile ?? $user->phone ?? '',
+                'email' => $user->email,
+                'mobile_verified' => true,
+                'email_verified' => true,
+                'plan_amount' => $plan->amount,
+                'document_type' => $user->approvedKycDocument->document_type ?? null,
+                'document_file_path' => $user->approvedKycDocument->document_file_path ?? null,
+                'document_number' => $user->approvedKycDocument->document_number ?? null,
+                'duration_months' => $request->duration_months,
+                'start_date' => $startDate,
+                'maturity_date' => $maturityDate,
+                'bank_account_holder_name' => $user->bankAccounts()->primary()->first()->account_holder_name ?? null,
+                'bank_account_number' => $user->bankAccounts()->primary()->first()->account_number ?? null,
+                'bank_ifsc_code' => $user->bankAccounts()->primary()->first()->ifsc_code ?? null,
+                'upi_id' => $user->upiAccounts()->primary()->first()->upi_id ?? null,
+                'terms_accepted' => true,
+                'status' => 'pending',
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Investment plan created successfully! Your registration is pending admin approval.',
+                'redirect_url' => route('user.dashboard')
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error creating investment plan: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to create investment plan. Please try again.'
+            ], 500);
+        }
     }
 
     /**

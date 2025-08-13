@@ -25,6 +25,13 @@ class User extends Authenticatable
         'role',
         'two_factor_enabled',
         'last_login_at',
+        'is_active',
+        'phone',
+        'preferred_payment_method',
+        'bank_account_holder_name',
+        'bank_account_number',
+        'bank_ifsc_code',
+        'upi_id',
     ];
 
     /**
@@ -35,6 +42,7 @@ class User extends Authenticatable
     protected $hidden = [
         'password',
         'remember_token',
+        'bank_account_number', // Hide sensitive bank details
     ];
 
     /**
@@ -49,6 +57,7 @@ class User extends Authenticatable
             'password' => 'hashed',
             'last_login_at' => 'datetime',
             'two_factor_enabled' => 'boolean',
+            'is_active' => 'boolean',
         ];
     }
 
@@ -82,5 +91,85 @@ class User extends Authenticatable
     public function auditLogs(): HasMany
     {
         return $this->hasMany(AuditLog::class);
+    }
+
+    /**
+     * KITTI registrations for this user
+     */
+    public function kittiRegistrations(): HasMany
+    {
+        return $this->hasMany(KittiRegistration::class, 'email', 'email');
+    }
+
+    /**
+     * Discontinue requests by this user
+     */
+    public function discontinueRequests(): HasMany
+    {
+        return $this->hasMany(DiscontinueRequest::class, 'email', 'email');
+    }
+
+    /**
+     * Get the user's KYC documents
+     */
+    public function kycDocuments()
+    {
+        return $this->hasMany(KycDocument::class);
+    }
+
+    /**
+     * Get the user's approved KYC document
+     */
+    public function approvedKycDocument()
+    {
+        return $this->hasOne(KycDocument::class)->where('status', 'approved');
+    }
+
+    /**
+     * Get the user's bank accounts
+     */
+    public function bankAccounts()
+    {
+        return $this->hasMany(BankAccount::class);
+    }
+
+    /**
+     * Get the user's UPI accounts
+     */
+    public function upiAccounts()
+    {
+        return $this->hasMany(UpiAccount::class);
+    }
+
+    /**
+     * Check if user has verified KYC
+     */
+    public function hasVerifiedKyc()
+    {
+        return $this->kycDocuments()->where('status', 'approved')->exists();
+    }
+
+    /**
+     * Check if user has any KYC document
+     */
+    public function hasKycDocument()
+    {
+        return $this->kycDocuments()->exists();
+    }
+
+    /**
+     * Check if user has any bank account
+     */
+    public function hasBankAccount()
+    {
+        return $this->bankAccounts()->active()->exists();
+    }
+
+    /**
+     * Check if user has any UPI account
+     */
+    public function hasUpiAccount()
+    {
+        return $this->upiAccounts()->active()->exists();
     }
 }

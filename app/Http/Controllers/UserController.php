@@ -25,24 +25,23 @@ class UserController extends Controller
     {
         $user = Auth::user();
         
-        // Get active registration
-        $activeRegistration = $user->approvedRegistrations()
+        // Get active registration using email relationship
+        $activeRegistration = $user->kittiRegistrations()
             ->where('status', 'approved')
             ->first();
         
         // Calculate total investment
-        $totalInvestment = $user->approvedRegistrations()
+        $totalInvestment = $user->kittiRegistrations()
             ->where('status', 'approved')
             ->sum('plan_amount');
         
         // Get next payment date (if any)
         $nextPaymentDate = null;
         if ($activeRegistration) {
-            // For now, just show the start date + 1 month
-            $nextPaymentDate = \Carbon\Carbon::parse($activeRegistration->start_date)->addMonth();
+            $nextPaymentDate = $this->getNextPaymentDate($activeRegistration);
         }
         
-        return view('user.dashboard', compact('activeRegistration', 'totalInvestment', 'nextPaymentDate'));
+        return view('user.dashboard', compact('user', 'activeRegistration', 'totalInvestment', 'nextPaymentDate'));
     }
 
     /**
@@ -52,15 +51,13 @@ class UserController extends Controller
     {
         $user = Auth::user();
         
-        $registration = KittiRegistration::where('admin_credentials_id', $user->email)
-            ->orWhere('email', $user->email)
-            ->first();
+        $registration = $user->kittiRegistrations()->first();
 
         return view('user.profile', compact('user', 'registration'));
     }
 
     /**
-     * Update user profile
+     * Update user profile including payment methods
      */
     public function updateProfile(Request $request)
     {
@@ -68,28 +65,41 @@ class UserController extends Controller
         
         $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email,' . $user->id,
-            'current_password' => 'nullable|string',
-            'new_password' => 'nullable|string|min:8|confirmed',
+            'phone' => 'nullable|string|max:20',
+            'preferred_payment_method' => 'nullable|in:gateway,upi,qr',
+            'bank_account_holder_name' => 'nullable|string|max:100',
+            'bank_account_number' => 'nullable|string|max:50',
+            'bank_ifsc_code' => 'nullable|string|max:20',
+            'upi_id' => 'nullable|string|max:100',
         ]);
 
-        $user->update([
-            'name' => $request->name,
-            'email' => $request->email,
-        ]);
-
-        // Update password if provided
-        if ($request->filled('current_password') && $request->filled('new_password')) {
-            if (!Hash::check($request->current_password, $user->password)) {
-                return back()->withErrors(['current_password' => 'Current password is incorrect']);
-            }
-
+        try {
             $user->update([
-                'password' => Hash::make($request->new_password)
+                'name' => $request->name,
+                'phone' => $request->phone,
             ]);
-        }
 
-        return back()->with('success', 'Profile updated successfully');
+            // Update or create payment method preferences
+            $user->update([
+                'preferred_payment_method' => $request->preferred_payment_method,
+                'bank_account_holder_name' => $request->bank_account_holder_name,
+                'bank_account_number' => $request->bank_account_number,
+                'bank_ifsc_code' => $request->bank_ifsc_code,
+                'upi_id' => $request->upi_id,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Profile updated successfully!'
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error updating profile: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update profile. Please try again.'
+            ], 500);
+        }
     }
 
     /**
@@ -99,9 +109,7 @@ class UserController extends Controller
     {
         $user = Auth::user();
         
-        $registration = KittiRegistration::where('admin_credentials_id', $user->email)
-            ->orWhere('email', $user->email)
-            ->first();
+        $registration = $user->kittiRegistrations()->first();
 
         if (!$registration) {
             return redirect()->route('user.dashboard')
@@ -112,7 +120,18 @@ class UserController extends Controller
             ->orderBy('created_at', 'desc')
             ->paginate(20);
 
-        return view('user.payment_history', compact('registration', 'payments'));
+        // Calculate stats for the view
+        $totalPaid = $registration->paymentTransactions()
+            ->where('status', 'success')
+            ->sum('amount');
+        $successfulCount = $registration->paymentTransactions()
+            ->where('status', 'success')
+            ->count();
+        $pendingCount = $registration->paymentTransactions()
+            ->where('status', 'pending')
+            ->count();
+
+        return view('user.payment_history', compact('registration', 'payments', 'totalPaid', 'successfulCount', 'pendingCount'));
     }
 
     /**
@@ -123,9 +142,7 @@ class UserController extends Controller
         $user = Auth::user();
         
         // Verify user owns this payment
-        $registration = KittiRegistration::where('admin_credentials_id', $user->email)
-            ->orWhere('email', $user->email)
-            ->first();
+        $registration = $user->kittiRegistrations()->first();
 
         if (!$registration || $payment->kitti_registration_id !== $registration->id) {
             abort(403, 'Unauthorized');
@@ -144,9 +161,7 @@ class UserController extends Controller
     {
         $user = Auth::user();
         
-        $registration = KittiRegistration::where('admin_credentials_id', $user->email)
-            ->orWhere('email', $user->email)
-            ->first();
+        $registration = $user->kittiRegistrations()->first();
 
         if (!$registration) {
             return response()->json([
@@ -180,6 +195,7 @@ class UserController extends Controller
 
         DiscontinueRequest::create([
             'kitti_registration_id' => $registration->id,
+            'email' => $user->email,
             'reason' => $request->reason,
             'status' => 'pending',
         ]);
@@ -197,9 +213,7 @@ class UserController extends Controller
     {
         $user = Auth::user();
         
-        $registration = KittiRegistration::where('admin_credentials_id', $user->email)
-            ->orWhere('email', $user->email)
-            ->first();
+        $registration = $user->kittiRegistrations()->first();
 
         if (!$registration) {
             return redirect()->route('user.dashboard')
@@ -253,7 +267,7 @@ class UserController extends Controller
             'email' => 'required|email',
         ]);
 
-        $user = User::where('email', $request->email)->first();
+        $user = \App\Models\User::where('email', $request->email)->first();
 
         if (!$user) {
             return response()->json([
@@ -309,7 +323,7 @@ class UserController extends Controller
             ], 400);
         }
 
-        $user = User::where('email', $email)->first();
+        $user = \App\Models\User::where('email', $email)->first();
         
         if (!$user) {
             return response()->json([
