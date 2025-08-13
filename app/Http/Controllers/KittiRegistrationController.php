@@ -185,6 +185,8 @@ class KittiRegistrationController extends Controller
      */
     public function storeStep5(Request $request)
     {
+        \Log::info('storeStep5 called with data:', $request->all());
+        
         $request->validate([
             'duration_months' => 'required|integer|min:1|max:60',
         ]);
@@ -197,9 +199,21 @@ class KittiRegistrationController extends Controller
         $startDate = now();
         $maturityDate = $startDate->copy()->addMonths((int)$request->duration_months);
         
+        \Log::info('Calculated dates:', [
+            'start_date' => $startDate->format('Y-m-d'),
+            'maturity_date' => $maturityDate->format('Y-m-d'),
+            'duration_months' => $request->duration_months
+        ]);
+        
         session([
             'start_date' => $startDate->format('Y-m-d'),
-            'calculated_maturity_date' => $maturityDate->format('Y-m-d'),
+            'maturity_date' => $maturityDate->format('Y-m-d'),
+        ]);
+
+        \Log::info('Session data after step 5:', [
+            'duration_months' => session('duration_months'),
+            'start_date' => session('start_date'),
+            'maturity_date' => session('maturity_date'),
         ]);
 
         return response()->json([
@@ -258,7 +272,7 @@ class KittiRegistrationController extends Controller
         $step3 = session('registration_step3', []);
         $step4 = session('registration_step4', []);
         $step5 = session('registration_step5', []);
-        $maturityDate = session('calculated_maturity_date');
+        $maturityDate = session('maturity_date');
 
         if (empty($step1)) {
             return redirect()->route('registration.create');

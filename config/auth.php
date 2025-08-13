@@ -112,4 +112,19 @@ return [
 
     'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 10800),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Authentication Redirect Paths
+    |--------------------------------------------------------------------------
+    |
+    | Here you may configure the redirect paths used by the authentication
+    | system. You are free to change these paths as needed.
+    |
+    */
+
+    'redirects' => [
+        'login' => 'auth/login',
+        'home' => '/',
+    ],
+
 ];

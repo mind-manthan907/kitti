@@ -271,6 +271,9 @@
                 <h2 class="text-2xl font-bold text-gray-900 mb-6">Investment Duration</h2>
                 
                 <form id="step5-form" class="space-y-6">
+                    <!-- Hidden input for fixed duration -->
+                    <input type="hidden" name="duration_months" value="12">
+                    
                     <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
                         <div class="flex items-center">
                             <i class="fas fa-info-circle text-blue-600 mr-3"></i>
@@ -484,8 +487,13 @@
 
         // Skip investment plan function (global scope for onclick)
         function skipInvestmentPlan() {
+            console.log('skipInvestmentPlan function called');
+            
             // Send request to backend to set skip flag
             const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+            console.log('CSRF Token:', csrfToken);
+            
+            console.log('Sending request to:', '{{ route("registration.skip-investment") }}');
             
             fetch('{{ route("registration.skip-investment") }}', {
                 method: 'POST',
@@ -496,9 +504,14 @@
                 },
                 body: JSON.stringify({})
             })
-            .then(response => response.json())
+            .then(response => {
+                console.log('Response received:', response);
+                return response.json();
+            })
             .then(data => {
+                console.log('Data received:', data);
                 if (data.success) {
+                    console.log('Successfully skipped investment plan, moving to step 8');
                     // Move directly to step 8 (Password Creation) - skip all investment steps
                     currentStep = 8;
                     
@@ -522,6 +535,7 @@
                     // Scroll to step 8
                     step8Element.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 } else {
+                    console.error('Failed to skip investment plan:', data.message);
                     showError('Failed to skip investment plan. Please try again.');
                 }
             })

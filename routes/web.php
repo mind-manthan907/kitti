@@ -12,6 +12,11 @@ Route::get('/', function () {
     return view('welcome');
 });
 
+// Redirect old login route to new auth.login route
+Route::get('/login', function () {
+    return redirect()->route('auth.login');
+})->name('login');
+
 // Registration routes
 Route::prefix('registration')->name('registration.')->group(function () {
     Route::get('/', [KittiRegistrationController::class, 'index'])->name('index');
