@@ -84,25 +84,62 @@ class KittiRegistrationController extends Controller
             'duration_months' => 'required|integer|min:6|max:60',
         ]);
 
+        // Ensure duration_months is properly cast to integer to prevent Carbon::addMonths() errors
+        // Laravel validation doesn't automatically cast values, so we need to do it manually
+
         try {
             // Get the selected plan
             $plan = \App\Models\InvestmentPlan::findOrFail($request->plan_id);
 
             // Validate duration against plan constraints
-            if ($request->duration_months < $plan->min_duration_months || $request->duration_months > $plan->max_duration_months) {
+            $durationMonths = (int)$request->duration_months;
+            
+            // Log the values for debugging
+            \Log::info('Investment plan creation - duration validation:', [
+                'requested_duration' => $request->duration_months,
+                'casted_duration' => $durationMonths,
+                'plan_min_duration' => $plan->min_duration_months,
+                'plan_max_duration' => $plan->max_duration_months,
+                'plan_name' => $plan->name
+            ]);
+            
+            if ($durationMonths < $plan->min_duration_months || $durationMonths > $plan->max_duration_months) {
                 return response()->json([
                     'success' => false,
                     'message' => "Duration must be between {$plan->min_duration_months} and {$plan->max_duration_months} months for this plan."
                 ], 422);
             }
 
+            // Validate that user has required KYC and bank account information
+            if (!$user->approvedKycDocument) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Please complete your KYC verification first.'
+                ], 422);
+            }
+
+            if (!$user->bankAccounts()->primary()->exists()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Please add a primary bank account first.'
+                ], 422);
+            }
+
             // Calculate dates
             $startDate = now();
-            $maturityDate = $startDate->copy()->addMonths($request->duration_months);
+            $maturityDate = $startDate->copy()->addMonths($durationMonths);
+            
+            // Log the calculated dates for debugging
+            \Log::info('Investment plan creation - date calculation:', [
+                'start_date' => $startDate->format('Y-m-d'),
+                'maturity_date' => $maturityDate->format('Y-m-d'),
+                'duration_months' => $durationMonths
+            ]);
 
             // Create the investment registration
             $registration = KittiRegistration::create([
                 'user_id' => $user->id,
+                'plan_id' => $plan->id,
                 'full_name' => $user->name,
                 'mobile' => $user->mobile ?? $user->phone ?? '',
                 'email' => $user->email,
@@ -112,7 +149,7 @@ class KittiRegistrationController extends Controller
                 'document_type' => $user->approvedKycDocument->document_type ?? null,
                 'document_file_path' => $user->approvedKycDocument->document_file_path ?? null,
                 'document_number' => $user->approvedKycDocument->document_number ?? null,
-                'duration_months' => $request->duration_months,
+                'duration_months' => $durationMonths,
                 'start_date' => $startDate,
                 'maturity_date' => $maturityDate,
                 'bank_account_holder_name' => $user->bankAccounts()->primary()->first()->account_holder_name ?? null,
@@ -130,7 +167,12 @@ class KittiRegistrationController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            \Log::error('Error creating investment plan: ' . $e->getMessage());
+            \Log::error('Error creating investment plan: ' . $e->getMessage(), [
+                'user_id' => $user->id ?? 'null',
+                'plan_id' => $request->plan_id ?? 'null',
+                'duration_months' => $request->duration_months ?? 'null',
+                'trace' => $e->getTraceAsString()
+            ]);
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to create investment plan. Please try again.'
@@ -605,6 +647,7 @@ class KittiRegistrationController extends Controller
                 
                 $registrationData = [
                     'user_id' => $user->id,
+                    'plan_id' => session('plan_id'), // Add plan_id from session
                     'full_name' => session('full_name'),
                     'mobile' => session('mobile'),
                     'email' => session('email'),

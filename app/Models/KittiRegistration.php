@@ -12,6 +12,7 @@ class KittiRegistration extends Model
 {
     protected $fillable = [
         'user_id',
+        'plan_id',
         'full_name',
         'mobile',
         'email',
@@ -44,6 +45,22 @@ class KittiRegistration extends Model
         'approved_at' => 'datetime',
         'form_data' => 'array',
     ];
+
+    /**
+     * Get the user who owns this registration
+     */
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Get the investment plan for this registration
+     */
+    public function investmentPlan(): BelongsTo
+    {
+        return $this->belongsTo(InvestmentPlan::class, 'plan_id');
+    }
 
     /**
      * Get the admin who approved this registration
