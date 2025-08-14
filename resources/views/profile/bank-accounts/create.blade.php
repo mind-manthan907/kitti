@@ -97,11 +97,11 @@
                     <p class="mt-1 text-xs text-gray-500">Primary account will be used for investment plans</p>
                 </div>
 
-                                <!-- Progress Indicator -->
-                <div id="submit-progress" class="hidden mb-6">
-                    <div class="flex items-center justify-center space-x-2 text-indigo-600">
-                        <i class="fas fa-spinner fa-spin"></i>
-                        <span>Saving bank account...</span>
+                                <!-- Loader Spinner -->
+                <div id="submit-loader" class="hidden mb-6">
+                    <div class="flex items-center justify-center space-x-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                        <span class="text-blue-700 font-medium">Saving bank account, please wait...</span>
                     </div>
                 </div>
 
@@ -139,14 +139,62 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('bank-account-form');
-    const progressContainer = document.getElementById('submit-progress');
+    const loaderContainer = document.getElementById('submit-loader');
     const submitBtn = document.getElementById('submit-btn');
 
     form.addEventListener('submit', function(e) {
         e.preventDefault();
         
-        // Show progress indicator
-        progressContainer.classList.remove('hidden');
+        // Client-side validation
+        const accountHolderName = document.getElementById('account_holder_name').value;
+        const accountNumber = document.getElementById('account_number').value;
+        const bankName = document.getElementById('bank_name').value;
+        const ifscCode = document.getElementById('ifsc_code').value;
+        
+        let hasErrors = false;
+        
+        // Clear previous error messages
+        document.querySelectorAll('.text-red-600').forEach(el => el.remove());
+        
+        if (!accountHolderName.trim()) {
+            hasErrors = true;
+            const errorEl = document.createElement('p');
+            errorEl.className = 'mt-1 text-sm text-red-600';
+            errorEl.textContent = 'Please enter account holder name.';
+            document.getElementById('account_holder_name').parentNode.appendChild(errorEl);
+        }
+        
+        if (!accountNumber.trim()) {
+            hasErrors = true;
+            const errorEl = document.createElement('p');
+            errorEl.className = 'mt-1 text-sm text-red-600';
+            errorEl.textContent = 'Please enter account number.';
+            document.getElementById('account_number').parentNode.appendChild(errorEl);
+        }
+        
+        if (!bankName.trim()) {
+            hasErrors = true;
+            const errorEl = document.createElement('p');
+            errorEl.className = 'mt-1 text-sm text-red-600';
+            errorEl.textContent = 'Please enter bank name.';
+            document.getElementById('bank_name').parentNode.appendChild(errorEl);
+        }
+        
+        if (!ifscCode.trim()) {
+            hasErrors = true;
+            const errorEl = document.createElement('p');
+            errorEl.className = 'mt-1 text-sm text-red-600';
+            errorEl.textContent = 'Please enter IFSC code.';
+            document.getElementById('ifsc_code').parentNode.appendChild(errorEl);
+        }
+        
+        if (hasErrors) {
+            showMessage('Please fix the validation errors below.', 'error');
+            return;
+        }
+        
+        // Show loader
+        loaderContainer.classList.remove('hidden');
         submitBtn.disabled = true;
         submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Saving...';
         
@@ -160,30 +208,58 @@ document.addEventListener('DOMContentLoaded', function() {
                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
             }
         })
-        .then(response => response.text())
-        .then(html => {
-            // Check if there are validation errors
-            if (html.includes('error')) {
-                // Parse HTML to check for validation errors
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(html, 'text/html');
-                const errorElements = doc.querySelectorAll('.text-red-600');
-                
-                if (errorElements.length > 0) {
-                    // Show validation errors
-                    showMessage('Please fix the validation errors below.', 'error');
-                    // Replace form content with new HTML (preserving errors)
-                    document.querySelector('.bg-white.rounded-lg.shadow.p-6').innerHTML = 
-                        doc.querySelector('.bg-white.rounded-lg.shadow.p-6').innerHTML;
-                } else {
-                    showMessage('Failed to save bank account. Please try again.', 'error');
-                }
-            } else {
+        .then(response => {
+            // Check if response is a redirect (success) or HTML with errors
+            if (response.redirected || response.url !== form.action) {
                 // Success - redirect
                 showMessage('Bank account added successfully! Redirecting...', 'success');
                 setTimeout(() => {
                     window.location.href = '{{ route("user.profile.bank-accounts.index") }}';
                 }, 2000);
+                return;
+            }
+            
+            return response.text();
+        })
+        .then(html => {
+            if (!html) return; // Already handled redirect
+            
+            // Check if there are validation errors by looking for specific error patterns
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            
+            // Look for validation error messages
+            const errorElements = doc.querySelectorAll('.text-red-600');
+            const hasValidationErrors = errorElements.length > 0;
+            
+            if (hasValidationErrors) {
+                // Show validation errors
+                showMessage('Please fix the validation errors below.', 'error');
+                
+                // Replace form content with new HTML (preserving errors)
+                const formContainer = document.querySelector('.bg-white.rounded-lg.shadow.p-6');
+                if (formContainer) {
+                    const newFormContent = doc.querySelector('.bg-white.rounded-lg.shadow.p-6');
+                    if (newFormContent) {
+                        formContainer.innerHTML = newFormContent.innerHTML;
+                        
+                        // Re-attach event listeners to the new form
+                        const newForm = document.getElementById('bank-account-form');
+                        if (newForm) {
+                            newForm.addEventListener('submit', arguments.callee);
+                        }
+                    }
+                }
+            } else {
+                // Check if it's a success response
+                if (html.includes('success') || html.includes('redirect')) {
+                    showMessage('Bank account added successfully! Redirecting...', 'success');
+                    setTimeout(() => {
+                        window.location.href = '{{ route("user.profile.bank-accounts.index") }}';
+                    }, 2000);
+                } else {
+                    showMessage('Failed to save bank account. Please try again.', 'error');
+                }
             }
         })
         .catch(error => {
@@ -193,7 +269,7 @@ document.addEventListener('DOMContentLoaded', function() {
         .finally(() => {
             // Reset form state
             setTimeout(() => {
-                progressContainer.classList.add('hidden');
+                loaderContainer.classList.add('hidden');
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = '<i class="fas fa-plus mr-2"></i>Add Account';
             }, 1000);

@@ -1,6 +1,9 @@
 @extends('layouts.app')
 
 @section('content')
+<script>
+console.log('🚀 Inline script test - JavaScript is working!');
+</script>
 <div class="container mx-auto px-4 py-8">
     <div class="max-w-2xl mx-auto">
         <!-- Header -->
@@ -8,6 +11,8 @@
             <h1 class="text-3xl font-bold text-gray-900">Upload KYC Document</h1>
             <p class="mt-2 text-gray-600">Please provide valid identity verification document</p>
         </div>
+
+
 
         <!-- Upload Form -->
         <div class="bg-white rounded-lg shadow p-6">
@@ -72,14 +77,11 @@
                     </div>
                 </div>
 
-                                <!-- Progress Bar -->
-                <div id="upload-progress" class="hidden mb-6">
-                    <div class="mb-2 flex justify-between text-sm text-gray-600">
-                        <span>Uploading...</span>
-                        <span id="progress-percentage">0%</span>
-                    </div>
-                    <div class="w-full bg-gray-200 rounded-full h-2">
-                        <div id="progress-bar" class="bg-indigo-600 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+                                <!-- Loader Spinner -->
+                <div id="upload-loader" class="hidden mb-6">
+                    <div class="flex items-center justify-center space-x-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                        <span class="text-blue-700 font-medium">Uploading document, please wait...</span>
                     </div>
                 </div>
 
@@ -116,89 +118,184 @@
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM loaded, initializing KYC upload form...');
+    console.log('✅ KYC form JavaScript loaded successfully!');
+    
+    // Get form elements
     const form = document.getElementById('kyc-upload-form');
-    const progressContainer = document.getElementById('upload-progress');
-    const progressBar = document.getElementById('progress-bar');
-    const progressPercentage = document.getElementById('progress-percentage');
+    const loaderContainer = document.getElementById('upload-loader');
     const submitBtn = document.getElementById('submit-btn');
 
+    // Debug logging
+    console.log('Form found:', form);
+    console.log('Loader container found:', loaderContainer);
+    console.log('Submit button found:', submitBtn);
+
+    // Check if all elements are found
+    if (!form || !loaderContainer || !submitBtn) {
+        console.error('Some form elements not found!');
+        return;
+    }
+
+
+
     form.addEventListener('submit', function(e) {
+        console.log('Form submit event triggered');
         e.preventDefault();
+        console.log('Form submission started - preventDefault called');
         
-        // Show progress bar
-        progressContainer.classList.remove('hidden');
+        // Client-side validation
+        const documentType = document.getElementById('document_type').value;
+        const documentNumber = document.getElementById('document_number').value;
+        const documentFile = document.getElementById('document_file').files[0];
+        
+        let hasErrors = false;
+        let errorMessage = '';
+        
+        // Clear previous error messages
+        document.querySelectorAll('.text-red-600').forEach(el => el.remove());
+        
+        if (!documentType) {
+            hasErrors = true;
+            errorMessage = 'Please select a document type.';
+            const errorEl = document.createElement('p');
+            errorEl.className = 'mt-1 text-sm text-red-600';
+            errorEl.textContent = errorMessage;
+            document.getElementById('document_type').parentNode.appendChild(errorEl);
+        }
+        
+        if (!documentNumber.trim()) {
+            hasErrors = true;
+            errorMessage = 'Please enter document number.';
+            const errorEl = document.createElement('p');
+            errorEl.className = 'mt-1 text-sm text-red-600';
+            errorEl.textContent = errorMessage;
+            document.getElementById('document_number').parentNode.appendChild(errorEl);
+        }
+        
+        if (!documentFile) {
+            hasErrors = true;
+            errorMessage = 'Please select a document file.';
+            const errorEl = document.createElement('p');
+            errorEl.className = 'mt-1 text-sm text-red-600';
+            errorEl.textContent = errorMessage;
+            document.getElementById('document_file').parentNode.appendChild(errorEl);
+        } else if (documentFile.size > 2 * 1024 * 1024) { // 2MB
+            hasErrors = true;
+            errorMessage = 'File size must be less than 2MB.';
+            const errorEl = document.createElement('p');
+            errorEl.className = 'mt-1 text-sm text-red-600';
+            errorEl.textContent = errorMessage;
+            document.getElementById('document_file').parentNode.appendChild(errorEl);
+        }
+        
+        if (hasErrors) {
+            showMessage('Please fix the validation errors below.', 'error');
+            return;
+        }
+        
+        // Show loader
+        loaderContainer.classList.remove('hidden');
         submitBtn.disabled = true;
         submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Uploading...';
         
-        // Simulate progress (since we can't get real upload progress with regular form submission)
-        let progress = 0;
-        const progressInterval = setInterval(() => {
-            progress += Math.random() * 15;
-            if (progress > 90) progress = 90;
-            
-            progressBar.style.width = progress + '%';
-            progressPercentage.textContent = Math.round(progress) + '%';
-        }, 200);
+        console.log('Loader shown, button disabled');
 
         // Submit form
         const formData = new FormData(form);
+        
+        // Get CSRF token
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        console.log('CSRF token found:', csrfToken ? 'Yes' : 'No');
         
         fetch(form.action, {
             method: 'POST',
             body: formData,
             headers: {
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                'X-CSRF-TOKEN': csrfToken
             }
         })
-        .then(response => response.text())
-        .then(html => {
-            // Complete progress
-            clearInterval(progressInterval);
-            progressBar.style.width = '100%';
-            progressPercentage.textContent = '100%';
+        .then(response => {
+            console.log('Response received:', response.status);
+            return response.text();
+        })
+        .then(response => {
+            console.log('Response received:', response.status);
             
-            // Check if there are validation errors
-            if (html.includes('error')) {
-                // Parse HTML to check for validation errors
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(html, 'text/html');
-                const errorElements = doc.querySelectorAll('.text-red-600');
-                
-                if (errorElements.length > 0) {
-                    // Show validation errors
-                    showMessage('Please fix the validation errors below.', 'error');
-                    // Replace form content with new HTML (preserving errors)
-                    document.querySelector('.bg-white.rounded-lg.shadow.p-6').innerHTML = 
-                        doc.querySelector('.bg-white.rounded-lg.shadow.p-6').innerHTML;
-                } else {
-                    showMessage('Upload failed. Please try again.', 'error');
-                }
-            } else {
+            // Check if response is a redirect (success) or HTML with errors
+            if (response.redirected || response.url !== form.action) {
                 // Success - redirect
+                console.log('Success - redirecting to:', response.url);
                 showMessage('KYC document uploaded successfully! Redirecting...', 'success');
                 setTimeout(() => {
                     window.location.href = '{{ route("user.profile.kyc.index") }}';
                 }, 2000);
+                return;
+            }
+            
+            return response.text();
+        })
+        .then(html => {
+            if (!html) return; // Already handled redirect
+            
+            console.log('HTML response length:', html.length);
+            console.log('Upload completed');
+            
+            // Check if there are validation errors by looking for specific error patterns
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            
+            // Look for validation error messages
+            const errorElements = doc.querySelectorAll('.text-red-600');
+            const hasValidationErrors = errorElements.length > 0;
+            
+            if (hasValidationErrors) {
+                console.log('Validation errors found:', errorElements.length);
+                showMessage('Please fix the validation errors below.', 'error');
+                
+                // Replace form content with new HTML (preserving errors)
+                const formContainer = document.querySelector('.bg-white.rounded-lg.shadow.p-6');
+                if (formContainer) {
+                    const newFormContent = doc.querySelector('.bg-white.rounded-lg.shadow.p-6');
+                    if (newFormContent) {
+                        formContainer.innerHTML = newFormContent.innerHTML;
+                        
+                        // Re-attach event listeners to the new form
+                        const newForm = document.getElementById('kyc-upload-form');
+                        if (newForm) {
+                            newForm.addEventListener('submit', arguments.callee);
+                        }
+                    }
+                }
+            } else {
+                // Check if it's a success response
+                if (html.includes('success') || html.includes('redirect')) {
+                    showMessage('KYC document uploaded successfully! Redirecting...', 'success');
+                    setTimeout(() => {
+                        window.location.href = '{{ route("user.profile.kyc.index") }}';
+                    }, 2000);
+                } else {
+                    showMessage('Upload failed. Please try again.', 'error');
+                }
             }
         })
         .catch(error => {
-            clearInterval(progressInterval);
-            console.error('Error:', error);
+            console.error('Fetch error:', error);
             showMessage('Upload failed. Please try again.', 'error');
         })
         .finally(() => {
+            console.log('Form submission completed, resetting state');
             // Reset form state
             setTimeout(() => {
-                progressContainer.classList.add('hidden');
+                loaderContainer.classList.add('hidden');
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = '<i class="fas fa-upload mr-2"></i>Upload Document';
-                progressBar.style.width = '0%';
-                progressPercentage.textContent = '0%';
             }, 1000);
         });
     });
 
     function showMessage(message, type) {
+        console.log('Showing message:', message, 'Type:', type);
         const container = document.getElementById('message-container');
         const content = document.getElementById('message-content');
         const icon = document.getElementById('message-icon');

@@ -54,7 +54,7 @@ class KycController extends Controller
                 'status' => 'pending',
             ]);
 
-            return redirect()->route('profile.kyc.index')
+            return redirect()->route('user.profile.kyc.index')
                 ->with('success', 'KYC document uploaded successfully! Please wait for admin verification.');
 
         } catch (\Exception $e) {
@@ -117,7 +117,7 @@ class KycController extends Controller
             // Delete record
             $kycDocument->delete();
 
-            return redirect()->route('profile.kyc.index')
+            return redirect()->route('user.profile.kyc.index')
                 ->with('success', 'KYC document deleted successfully.');
 
         } catch (\Exception $e) {

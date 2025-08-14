@@ -67,7 +67,7 @@ class BankAccountController extends Controller
 
             DB::commit();
 
-            return redirect()->route('profile.bank-accounts.index')
+            return redirect()->route('user.profile.bank-accounts.index')
                 ->with('success', 'Bank account added successfully!');
 
         } catch (\Exception $e) {
@@ -133,7 +133,7 @@ class BankAccountController extends Controller
 
             DB::commit();
 
-            return redirect()->route('profile.bank-accounts.index')
+            return redirect()->route('user.profile.bank-accounts.index')
                 ->with('success', 'Bank account updated successfully!');
 
         } catch (\Exception $e) {

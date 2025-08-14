@@ -42,10 +42,10 @@ class KittiRegistrationController extends Controller
         // Check if user has verified KYC
         if (!$user->hasVerifiedKyc()) {
             if (!$user->hasKycDocument()) {
-                return redirect()->route('profile.kyc.create')
+                return redirect()->route('user.profile.kyc.create')
                     ->with('warning', 'Please complete your KYC verification before creating an investment plan.');
             } else {
-                return redirect()->route('profile.kyc.index')
+                return redirect()->route('user.profile.kyc.index')
                     ->with('warning', 'Your KYC is pending verification. Please wait for admin approval.');
             }
         }
