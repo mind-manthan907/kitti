@@ -36,11 +36,65 @@ class BankAccountController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'account_holder_name' => 'required|string|max:100',
-            'account_number' => 'required|string|max:50|unique:bank_accounts,account_number',
-            'bank_name' => 'required|string|max:100',
-            'ifsc_code' => 'required|string|max:20',
-            'branch_name' => 'nullable|string|max:100',
+            'account_holder_name' => [
+                'required',
+                'string',
+                'max:100',
+                'min:2',
+                'regex:/^[a-zA-Z\s\.]+$/',
+                function ($attribute, $value, $fail) {
+                    if (preg_match('/\d/', $value)) {
+                        $fail('Account holder name should not contain numbers.');
+                    }
+                    if (preg_match('/[^a-zA-Z\s\.]/', $value)) {
+                        $fail('Account holder name should only contain letters, spaces, and dots.');
+                    }
+                }
+            ],
+            'account_number' => [
+                'required',
+                'string',
+                'max:20',
+                'min:8',
+                'unique:bank_accounts,account_number',
+                'regex:/^\d+$/',
+                function ($attribute, $value, $fail) {
+                    if (!preg_match('/^\d{8,20}$/', $value)) {
+                        $fail('Account number must be 8-20 digits only.');
+                    }
+                }
+            ],
+            'bank_name' => [
+                'required',
+                'string',
+                'max:100',
+                'min:2',
+                'regex:/^[a-zA-Z\s\&\-\.]+$/',
+                function ($attribute, $value, $fail) {
+                    if (preg_match('/\d/', $value)) {
+                        $fail('Bank name should not contain numbers.');
+                    }
+                }
+            ],
+            'ifsc_code' => [
+                'required',
+                'string',
+                'size:11',
+                'regex:/^[A-Z]{4}0[A-Z0-9]{6}$/',
+                function ($attribute, $value, $fail) {
+                    $value = strtoupper($value);
+                    if (!preg_match('/^[A-Z]{4}0[A-Z0-9]{6}$/', $value)) {
+                        $fail('IFSC code must be in format: BANK0001234 (4 letters + 0 + 6 alphanumeric).');
+                    }
+                }
+            ],
+            'branch_name' => [
+                'nullable',
+                'string',
+                'max:100',
+                'min:2',
+                'regex:/^[a-zA-Z\s\&\-\.]+$/'
+            ],
             'is_primary' => 'boolean',
         ]);
 
@@ -102,11 +156,65 @@ class BankAccountController extends Controller
         }
 
         $request->validate([
-            'account_holder_name' => 'required|string|max:100',
-            'account_number' => 'required|string|max:50|unique:bank_accounts,account_number,' . $bankAccount->id,
-            'bank_name' => 'required|string|max:100',
-            'ifsc_code' => 'required|string|max:20',
-            'branch_name' => 'nullable|string|max:100',
+            'account_holder_name' => [
+                'required',
+                'string',
+                'max:100',
+                'min:2',
+                'regex:/^[a-zA-Z\s\.]+$/',
+                function ($attribute, $value, $fail) {
+                    if (preg_match('/\d/', $value)) {
+                        $fail('Account holder name should not contain numbers.');
+                    }
+                    if (preg_match('/[^a-zA-Z\s\.]/', $value)) {
+                        $fail('Account holder name should only contain letters, spaces, and dots.');
+                    }
+                }
+            ],
+            'account_number' => [
+                'required',
+                'string',
+                'max:20',
+                'min:8',
+                'unique:bank_accounts,account_number,' . $bankAccount->id,
+                'regex:/^\d+$/',
+                function ($attribute, $value, $fail) {
+                    if (!preg_match('/^\d{8,20}$/', $value)) {
+                        $fail('Account number must be 8-20 digits only.');
+                    }
+                }
+            ],
+            'bank_name' => [
+                'required',
+                'string',
+                'max:100',
+                'min:2',
+                'regex:/^[a-zA-Z\s\&\-\.]+$/',
+                function ($attribute, $value, $fail) {
+                    if (preg_match('/\d/', $value)) {
+                        $fail('Bank name should not contain numbers.');
+                    }
+                }
+            ],
+            'ifsc_code' => [
+                'required',
+                'string',
+                'size:11',
+                'regex:/^[A-Z]{4}0[A-Z0-9]{6}$/',
+                function ($attribute, $value, $fail) {
+                    $value = strtoupper($value);
+                    if (!preg_match('/^[A-Z]{4}0[A-Z0-9]{6}$/', $value)) {
+                        $fail('IFSC code must be in format: BANK0001234 (4 letters + 0 + 6 alphanumeric).');
+                    }
+                }
+            ],
+            'branch_name' => [
+                'nullable',
+                'string',
+                'max:100',
+                'min:2',
+                'regex:/^[a-zA-Z\s\&\-\.]+$/'
+            ],
             'is_primary' => 'boolean',
         ]);
 

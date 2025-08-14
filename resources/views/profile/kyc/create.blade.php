@@ -137,6 +137,41 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
     }
 
+    // Add real-time validation
+    const documentTypeSelect = document.getElementById('document_type');
+    const documentNumberInput = document.getElementById('document_number');
+    const documentFileInput = document.getElementById('document_file');
+
+    // Real-time document type validation
+    documentTypeSelect.addEventListener('change', function() {
+        clearFieldError('document_type');
+        if (this.value) {
+            // Clear document number when type changes
+            documentNumberInput.value = '';
+            clearFieldError('document_number');
+        }
+    });
+
+    // Real-time document number validation
+    documentNumberInput.addEventListener('input', function() {
+        clearFieldError('document_number');
+        const value = this.value.trim();
+        const documentType = documentTypeSelect.value;
+        
+        if (value && documentType) {
+            validateDocumentNumber(value, documentType);
+        }
+    });
+
+    // Real-time file validation
+    documentFileInput.addEventListener('change', function() {
+        clearFieldError('document_file');
+        const file = this.files[0];
+        if (file) {
+            validateDocumentFile(file);
+        }
+    });
+
 
 
     form.addEventListener('submit', function(e) {
@@ -146,47 +181,66 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Client-side validation
         const documentType = document.getElementById('document_type').value;
-        const documentNumber = document.getElementById('document_number').value;
+        const documentNumber = document.getElementById('document_number').value.trim();
         const documentFile = document.getElementById('document_file').files[0];
         
         let hasErrors = false;
-        let errorMessage = '';
         
         // Clear previous error messages
         document.querySelectorAll('.text-red-600').forEach(el => el.remove());
         
+        // Document Type validation
         if (!documentType) {
             hasErrors = true;
-            errorMessage = 'Please select a document type.';
-            const errorEl = document.createElement('p');
-            errorEl.className = 'mt-1 text-sm text-red-600';
-            errorEl.textContent = errorMessage;
-            document.getElementById('document_type').parentNode.appendChild(errorEl);
+            showFieldError('document_type', 'Please select a document type.');
         }
         
-        if (!documentNumber.trim()) {
+        // Document Number validation
+        if (!documentNumber) {
             hasErrors = true;
-            errorMessage = 'Please enter document number.';
-            const errorEl = document.createElement('p');
-            errorEl.className = 'mt-1 text-sm text-red-600';
-            errorEl.textContent = errorMessage;
-            document.getElementById('document_number').parentNode.appendChild(errorEl);
+            showFieldError('document_number', 'Please enter document number.');
+        } else {
+            // Document-specific validation
+            if (documentType === 'aadhar') {
+                if (!/^\d{12}$/.test(documentNumber)) {
+                    hasErrors = true;
+                    showFieldError('document_number', 'Aadhar number must be exactly 12 digits.');
+                }
+            } else if (documentType === 'pan') {
+                if (!/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(documentNumber.toUpperCase())) {
+                    hasErrors = true;
+                    showFieldError('document_number', 'PAN number must be in format: ABCDE1234F (5 letters + 4 digits + 1 letter).');
+                }
+            } else if (documentType === 'driving_license') {
+                if (!/^[A-Z0-9]{16}$/.test(documentNumber.toUpperCase())) {
+                    hasErrors = true;
+                    showFieldError('document_number', 'Driving License number must be exactly 16 alphanumeric characters.');
+                }
+            } else if (documentType === 'passport') {
+                if (!/^[A-Z0-9]{8,9}$/.test(documentNumber.toUpperCase())) {
+                    hasErrors = true;
+                    showFieldError('document_number', 'Passport number must be 8-9 alphanumeric characters.');
+                }
+            }
         }
         
+        // Document File validation
         if (!documentFile) {
             hasErrors = true;
-            errorMessage = 'Please select a document file.';
-            const errorEl = document.createElement('p');
-            errorEl.className = 'mt-1 text-sm text-red-600';
-            errorEl.textContent = errorMessage;
-            document.getElementById('document_file').parentNode.appendChild(errorEl);
-        } else if (documentFile.size > 2 * 1024 * 1024) { // 2MB
-            hasErrors = true;
-            errorMessage = 'File size must be less than 2MB.';
-            const errorEl = document.createElement('p');
-            errorEl.className = 'mt-1 text-sm text-red-600';
-            errorEl.textContent = errorMessage;
-            document.getElementById('document_file').parentNode.appendChild(errorEl);
+            showFieldError('document_file', 'Please select a document file.');
+        } else {
+            // File size validation
+            if (documentFile.size > 2 * 1024 * 1024) { // 2MB
+                hasErrors = true;
+                showFieldError('document_file', 'File size must be less than 2MB.');
+            }
+            
+            // File type validation
+            const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+            if (!allowedTypes.includes(documentFile.type)) {
+                hasErrors = true;
+                showFieldError('document_file', 'Only PDF, JPG, JPEG, and PNG files are allowed.');
+            }
         }
         
         if (hasErrors) {
@@ -293,6 +347,79 @@ document.addEventListener('DOMContentLoaded', function() {
             }, 1000);
         });
     });
+
+    function showFieldError(fieldId, message) {
+        const field = document.getElementById(fieldId);
+        if (field) {
+            const errorEl = document.createElement('p');
+            errorEl.className = 'mt-1 text-sm text-red-600';
+            errorEl.textContent = message;
+            field.parentNode.appendChild(errorEl);
+        }
+    }
+
+    function clearFieldError(fieldId) {
+        const field = document.getElementById(fieldId);
+        if (field) {
+            const errorEl = field.parentNode.querySelector('.text-red-600');
+            if (errorEl) {
+                errorEl.remove();
+            }
+        }
+    }
+
+    function validateDocumentNumber(value, documentType) {
+        let isValid = true;
+        let errorMessage = '';
+
+        if (documentType === 'aadhar') {
+            if (!/^\d{12}$/.test(value)) {
+                isValid = false;
+                errorMessage = 'Aadhar number must be exactly 12 digits.';
+            }
+        } else if (documentType === 'pan') {
+            if (!/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(value.toUpperCase())) {
+                isValid = false;
+                errorMessage = 'PAN number must be in format: ABCDE1234F (5 letters + 4 digits + 1 letter).';
+            }
+        } else if (documentType === 'driving_license') {
+            if (!/^[A-Z0-9]{16}$/.test(value.toUpperCase())) {
+                isValid = false;
+                errorMessage = 'Driving License number must be exactly 16 alphanumeric characters.';
+            }
+        } else if (documentType === 'passport') {
+            if (!/^[A-Z0-9]{8,9}$/.test(value.toUpperCase())) {
+                isValid = false;
+                errorMessage = 'Passport number must be 8-9 alphanumeric characters.';
+            }
+        }
+
+        if (!isValid) {
+            showFieldError('document_number', errorMessage);
+        }
+    }
+
+    function validateDocumentFile(file) {
+        let isValid = true;
+        let errorMessage = '';
+
+        // File size validation
+        if (file.size > 2 * 1024 * 1024) { // 2MB
+            isValid = false;
+            errorMessage = 'File size must be less than 2MB.';
+        }
+
+        // File type validation
+        const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+        if (!allowedTypes.includes(file.type)) {
+            isValid = false;
+            errorMessage = 'Only PDF, JPG, JPEG, and PNG files are allowed.';
+        }
+
+        if (!isValid) {
+            showFieldError('document_file', errorMessage);
+        }
+    }
 
     function showMessage(message, type) {
         console.log('Showing message:', message, 'Type:', type);

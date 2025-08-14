@@ -37,8 +37,61 @@ class KycController extends Controller
     {
         $request->validate([
             'document_type' => 'required|in:aadhar,pan,driving_license,passport',
-            'document_number' => 'required|string|max:50|unique:kyc_documents,document_number',
-            'document_file' => 'required|file|mimes:pdf,jpg,jpeg,png|max:2048',
+            'document_number' => [
+                'required',
+                'string',
+                'max:50',
+                'unique:kyc_documents,document_number',
+                function ($attribute, $value, $fail) use ($request) {
+                    $documentType = $request->input('document_type');
+                    
+                    // Aadhar validation (12 digits)
+                    if ($documentType === 'aadhar' && !preg_match('/^\d{12}$/', $value)) {
+                        $fail('Aadhar number must be exactly 12 digits.');
+                    }
+                    
+                    // PAN validation (10 alphanumeric characters)
+                    if ($documentType === 'pan' && !preg_match('/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/', strtoupper($value))) {
+                        $fail('PAN number must be in format: ABCDE1234F (5 letters + 4 digits + 1 letter).');
+                    }
+                    
+                    // Driving License validation (16 alphanumeric characters)
+                    if ($documentType === 'driving_license' && !preg_match('/^[A-Z0-9]{16}$/', strtoupper($value))) {
+                        $fail('Driving License number must be exactly 16 alphanumeric characters.');
+                    }
+                    
+                    // Passport validation (8-9 alphanumeric characters)
+                    if ($documentType === 'passport' && !preg_match('/^[A-Z0-9]{8,9}$/', strtoupper($value))) {
+                        $fail('Passport number must be 8-9 alphanumeric characters.');
+                    }
+                }
+            ],
+            'document_file' => [
+                'required',
+                'file',
+                'mimes:pdf,jpg,jpeg,png',
+                'max:2048',
+                function ($attribute, $value, $fail) {
+                    // Check file dimensions for images
+                    if (in_array($value->getClientMimeType(), ['image/jpeg', 'image/jpg', 'image/png'])) {
+                        $imageInfo = getimagesize($value->getPathname());
+                        if ($imageInfo) {
+                            $width = $imageInfo[0];
+                            $height = $imageInfo[1];
+                            
+                            // Minimum dimensions
+                            if ($width < 300 || $height < 300) {
+                                $fail('Image dimensions must be at least 300x300 pixels for clarity.');
+                            }
+                            
+                            // Maximum dimensions
+                            if ($width > 4000 || $height > 4000) {
+                                $fail('Image dimensions must not exceed 4000x4000 pixels.');
+                            }
+                        }
+                    }
+                }
+            ],
         ]);
 
         try {

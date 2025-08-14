@@ -146,46 +146,68 @@ document.addEventListener('DOMContentLoaded', function() {
         e.preventDefault();
         
         // Client-side validation
-        const accountHolderName = document.getElementById('account_holder_name').value;
-        const accountNumber = document.getElementById('account_number').value;
-        const bankName = document.getElementById('bank_name').value;
-        const ifscCode = document.getElementById('ifsc_code').value;
+        const accountHolderName = document.getElementById('account_holder_name').value.trim();
+        const accountNumber = document.getElementById('account_number').value.trim();
+        const bankName = document.getElementById('bank_name').value.trim();
+        const ifscCode = document.getElementById('ifsc_code').value.trim();
         
         let hasErrors = false;
         
         // Clear previous error messages
         document.querySelectorAll('.text-red-600').forEach(el => el.remove());
         
-        if (!accountHolderName.trim()) {
+        // Account Holder Name validation
+        if (!accountHolderName) {
             hasErrors = true;
-            const errorEl = document.createElement('p');
-            errorEl.className = 'mt-1 text-sm text-red-600';
-            errorEl.textContent = 'Please enter account holder name.';
-            document.getElementById('account_holder_name').parentNode.appendChild(errorEl);
+            showFieldError('account_holder_name', 'Please enter account holder name.');
+        } else if (accountHolderName.length < 2) {
+            hasErrors = true;
+            showFieldError('account_holder_name', 'Account holder name must be at least 2 characters.');
+        } else if (/\d/.test(accountHolderName)) {
+            hasErrors = true;
+            showFieldError('account_holder_name', 'Account holder name should not contain numbers.');
+        } else if (!/^[a-zA-Z\s\.]+$/.test(accountHolderName)) {
+            hasErrors = true;
+            showFieldError('account_holder_name', 'Account holder name should only contain letters, spaces, and dots.');
         }
         
-        if (!accountNumber.trim()) {
+        // Account Number validation
+        if (!accountNumber) {
             hasErrors = true;
-            const errorEl = document.createElement('p');
-            errorEl.className = 'mt-1 text-sm text-red-600';
-            errorEl.textContent = 'Please enter account number.';
-            document.getElementById('account_number').parentNode.appendChild(errorEl);
+            showFieldError('account_number', 'Please enter account number.');
+        } else if (!/^\d+$/.test(accountNumber)) {
+            hasErrors = true;
+            showFieldError('account_number', 'Account number must contain only digits.');
+        } else if (accountNumber.length < 8 || accountNumber.length > 20) {
+            hasErrors = true;
+            showFieldError('account_number', 'Account number must be 8-20 digits.');
         }
         
-        if (!bankName.trim()) {
+        // Bank Name validation
+        if (!bankName) {
             hasErrors = true;
-            const errorEl = document.createElement('p');
-            errorEl.className = 'mt-1 text-sm text-red-600';
-            errorEl.textContent = 'Please enter bank name.';
-            document.getElementById('bank_name').parentNode.appendChild(errorEl);
+            showFieldError('bank_name', 'Please enter bank name.');
+        } else if (bankName.length < 2) {
+            hasErrors = true;
+            showFieldError('bank_name', 'Bank name must be at least 2 characters.');
+        } else if (/\d/.test(bankName)) {
+            hasErrors = true;
+            showFieldError('bank_name', 'Bank name should not contain numbers.');
+        } else if (!/^[a-zA-Z\s\&\-\.]+$/.test(bankName)) {
+            hasErrors = true;
+            showFieldError('bank_name', 'Bank name should only contain letters, spaces, hyphens, ampersands, and dots.');
         }
         
-        if (!ifscCode.trim()) {
+        // IFSC Code validation
+        if (!ifscCode) {
             hasErrors = true;
-            const errorEl = document.createElement('p');
-            errorEl.className = 'mt-1 text-sm text-red-600';
-            errorEl.textContent = 'Please enter IFSC code.';
-            document.getElementById('ifsc_code').parentNode.appendChild(errorEl);
+            showFieldError('ifsc_code', 'Please enter IFSC code.');
+        } else if (ifscCode.length !== 11) {
+            hasErrors = true;
+            showFieldError('ifsc_code', 'IFSC code must be exactly 11 characters.');
+        } else if (!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(ifscCode.toUpperCase())) {
+            hasErrors = true;
+            showFieldError('ifsc_code', 'IFSC code must be in format: BANK0001234 (4 letters + 0 + 6 alphanumeric).');
         }
         
         if (hasErrors) {
@@ -275,6 +297,16 @@ document.addEventListener('DOMContentLoaded', function() {
             }, 1000);
         });
     });
+
+    function showFieldError(fieldId, message) {
+        const field = document.getElementById(fieldId);
+        if (field) {
+            const errorEl = document.createElement('p');
+            errorEl.className = 'mt-1 text-sm text-red-600';
+            errorEl.textContent = message;
+            field.parentNode.appendChild(errorEl);
+        }
+    }
 
     function showMessage(message, type) {
         const container = document.getElementById('message-container');
