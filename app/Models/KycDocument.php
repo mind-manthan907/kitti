@@ -16,6 +16,7 @@ class KycDocument extends Model
         'document_file_path',
         'status',
         'rejection_reason',
+        'admin_notes',
         'verified_at',
         'verified_by',
     ];

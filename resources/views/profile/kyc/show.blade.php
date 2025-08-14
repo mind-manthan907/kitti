@@ -33,18 +33,30 @@
                                 {{ ucfirst($kycDocument->status) }}
                             </span>
                         </div>
-                        @if($kycDocument->status === 'approved')
-                            <div>
-                                <span class="text-sm font-medium text-gray-500">Verified Date:</span>
-                                <p class="text-sm text-gray-900">{{ $kycDocument->verified_at->format('M d, Y \a\t g:i A') }}</p>
-                            </div>
-                        @endif
-                        @if($kycDocument->status === 'rejected')
-                            <div>
-                                <span class="text-sm font-medium text-gray-500">Rejection Reason:</span>
-                                <p class="text-sm text-red-600">{{ $kycDocument->rejection_reason }}</p>
-                            </div>
-                        @endif
+                                                 @if($kycDocument->status === 'approved')
+                             <div>
+                                 <span class="text-sm font-medium text-gray-500">Verified Date:</span>
+                                 <p class="text-sm text-gray-900">{{ $kycDocument->verified_at->format('M d, Y \a\t g:i A') }}</p>
+                             </div>
+                             @if($kycDocument->admin_notes)
+                             <div>
+                                 <span class="text-sm font-medium text-gray-500">Admin Notes:</span>
+                                 <p class="text-sm text-gray-700">{{ $kycDocument->admin_notes }}</p>
+                             </div>
+                             @endif
+                         @endif
+                                                 @if($kycDocument->status === 'rejected')
+                             <div>
+                                 <span class="text-sm font-medium text-gray-500">Rejection Reason:</span>
+                                 <p class="text-sm text-red-600">{{ $kycDocument->rejection_reason }}</p>
+                             </div>
+                             @if($kycDocument->admin_notes)
+                             <div>
+                                 <span class="text-sm font-medium text-gray-500">Admin Notes:</span>
+                                 <p class="text-sm text-gray-700">{{ $kycDocument->admin_notes }}</p>
+                             </div>
+                             @endif
+                         @endif
                     </div>
                 </div>
                 

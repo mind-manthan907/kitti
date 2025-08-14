@@ -8,6 +8,7 @@ use App\Models\DiscontinueRequest;
 use App\Models\AuditLog;
 use App\Models\SystemConfig;
 use App\Models\User;
+use App\Models\KycDocument;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -36,6 +37,7 @@ class AdminController extends Controller
             'pending_discontinue_requests' => DiscontinueRequest::pending()->count(),
             'overdue_payments' => $this->getOverduePaymentsCount(),
             'blocked_users' => User::where('is_active', false)->count(),
+            'pending_kyc' => KycDocument::where('status', 'pending')->count(),
         ];
 
         $recentRegistrations = KittiRegistration::with('latestPayment')
@@ -743,5 +745,135 @@ class AdminController extends Controller
         }
 
         return $overdueCount;
+    }
+
+    /**
+     * List all KYC documents for admin review
+     */
+    public function kycDocuments(Request $request)
+    {
+        $query = KycDocument::with(['user']);
+
+        // Apply filters
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        if ($request->filled('document_type')) {
+            $query->where('document_type', $request->document_type);
+        }
+
+        if ($request->filled('date_from')) {
+            $query->whereDate('created_at', '>=', $request->date_from);
+        }
+
+        if ($request->filled('date_to')) {
+            $query->whereDate('created_at', '<=', $request->date_to);
+        }
+
+        $kycDocuments = $query->latest()->paginate(20);
+
+        $stats = [
+            'total' => KycDocument::count(),
+            'pending' => KycDocument::where('status', 'pending')->count(),
+            'approved' => KycDocument::where('status', 'approved')->count(),
+            'rejected' => KycDocument::where('status', 'rejected')->count(),
+        ];
+
+        return view('admin.kyc.index', compact('kycDocuments', 'stats'));
+    }
+
+    /**
+     * Show KYC document details for admin review
+     */
+    public function showKycDocument(KycDocument $kycDocument)
+    {
+        $kycDocument->load(['user']);
+        
+        return view('admin.kyc.show', compact('kycDocument'));
+    }
+
+    /**
+     * Approve KYC document
+     */
+    public function approveKycDocument(Request $request, KycDocument $kycDocument)
+    {
+        $request->validate([
+            'admin_notes' => 'nullable|string|max:500',
+        ]);
+
+        try {
+            $kycDocument->update([
+                'status' => 'approved',
+                'verified_at' => now(),
+                'verified_by' => auth()->id(),
+                'admin_notes' => $request->admin_notes,
+            ]);
+
+            // Log audit
+            AuditLog::create([
+                'user_id' => auth()->id(),
+                'action' => 'kyc_approved',
+                'model_type' => KycDocument::class,
+                'model_id' => $kycDocument->id,
+                'description' => "KYC document approved for user {$kycDocument->user->email}",
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'KYC document approved successfully!'
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error approving KYC: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to approve KYC document. Please try again.'
+            ], 500);
+        }
+    }
+
+    /**
+     * Reject KYC document
+     */
+    public function rejectKycDocument(Request $request, KycDocument $kycDocument)
+    {
+        $request->validate([
+            'rejection_reason' => 'required|string|max:500',
+            'admin_notes' => 'nullable|string|max:500',
+        ]);
+
+        try {
+            $kycDocument->update([
+                'status' => 'rejected',
+                'rejection_reason' => $request->rejection_reason,
+                'admin_notes' => $request->admin_notes,
+            ]);
+
+            // Log audit
+            AuditLog::create([
+                'user_id' => auth()->id(),
+                'action' => 'kyc_rejected',
+                'model_type' => KycDocument::class,
+                'model_id' => $kycDocument->id,
+                'description' => "KYC document rejected for user {$kycDocument->user->email}. Reason: {$request->rejection_reason}",
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'KYC document rejected successfully!'
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error rejecting KYC: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to reject KYC document. Please try again.'
+            ], 500);
+        }
     }
 }

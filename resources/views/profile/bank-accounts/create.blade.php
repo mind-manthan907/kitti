@@ -11,7 +11,7 @@
 
         <!-- Add Form -->
         <div class="bg-white rounded-lg shadow p-6">
-            <form method="POST" action="{{ route('user.profile.bank-accounts.store') }}">
+            <form id="bank-account-form" method="POST" action="{{ route('user.profile.bank-accounts.store') }}">
                 @csrf
                 
                 <!-- Account Holder Name -->
@@ -97,13 +97,21 @@
                     <p class="mt-1 text-xs text-gray-500">Primary account will be used for investment plans</p>
                 </div>
 
+                                <!-- Progress Indicator -->
+                <div id="submit-progress" class="hidden mb-6">
+                    <div class="flex items-center justify-center space-x-2 text-indigo-600">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <span>Saving bank account...</span>
+                    </div>
+                </div>
+
                 <!-- Submit Buttons -->
                 <div class="flex justify-between">
-                                            <a href="{{ route('user.profile.bank-accounts.index') }}" 
-                           class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded-md text-sm font-medium">
-                            <i class="fas fa-arrow-left mr-2"></i>Back to Accounts
-                        </a>
-                    <button type="submit" 
+                    <a href="{{ route('user.profile.bank-accounts.index') }}" 
+                       class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded-md text-sm font-medium">
+                        <i class="fas fa-arrow-left mr-2"></i>Back to Accounts
+                    </a>
+                    <button type="submit" id="submit-btn"
                             class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-md text-sm font-medium">
                         <i class="fas fa-plus mr-2"></i>Add Account
                     </button>
@@ -112,4 +120,112 @@
         </div>
     </div>
 </div>
+
+<!-- Response Messages -->
+<div id="message-container" class="fixed top-4 right-4 z-50 hidden">
+    <div id="message-content" class="p-4 rounded-lg shadow-lg max-w-md">
+        <div class="flex items-center">
+            <div id="message-icon" class="flex-shrink-0 mr-3"></div>
+            <div>
+                <p id="message-text" class="text-sm font-medium"></p>
+            </div>
+        </div>
+    </div>
+</div>
+
 @endsection
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('bank-account-form');
+    const progressContainer = document.getElementById('submit-progress');
+    const submitBtn = document.getElementById('submit-btn');
+
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        // Show progress indicator
+        progressContainer.classList.remove('hidden');
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Saving...';
+        
+        // Submit form
+        const formData = new FormData(form);
+        
+        fetch(form.action, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            }
+        })
+        .then(response => response.text())
+        .then(html => {
+            // Check if there are validation errors
+            if (html.includes('error')) {
+                // Parse HTML to check for validation errors
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const errorElements = doc.querySelectorAll('.text-red-600');
+                
+                if (errorElements.length > 0) {
+                    // Show validation errors
+                    showMessage('Please fix the validation errors below.', 'error');
+                    // Replace form content with new HTML (preserving errors)
+                    document.querySelector('.bg-white.rounded-lg.shadow.p-6').innerHTML = 
+                        doc.querySelector('.bg-white.rounded-lg.shadow.p-6').innerHTML;
+                } else {
+                    showMessage('Failed to save bank account. Please try again.', 'error');
+                }
+            } else {
+                // Success - redirect
+                showMessage('Bank account added successfully! Redirecting...', 'success');
+                setTimeout(() => {
+                    window.location.href = '{{ route("user.profile.bank-accounts.index") }}';
+                }, 2000);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showMessage('Failed to save bank account. Please try again.', 'error');
+        })
+        .finally(() => {
+            // Reset form state
+            setTimeout(() => {
+                progressContainer.classList.add('hidden');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-plus mr-2"></i>Add Account';
+            }, 1000);
+        });
+    });
+
+    function showMessage(message, type) {
+        const container = document.getElementById('message-container');
+        const content = document.getElementById('message-content');
+        const icon = document.getElementById('message-icon');
+        const text = document.getElementById('message-text');
+
+        // Set message content
+        text.textContent = message;
+
+        // Set styling based on type
+        if (type === 'success') {
+            content.className = 'p-4 rounded-lg shadow-lg max-w-md bg-green-50 border border-green-200';
+            icon.innerHTML = '<i class="fas fa-check-circle text-green-500 text-xl"></i>';
+        } else {
+            content.className = 'p-4 rounded-lg shadow-lg max-w-md bg-red-50 border border-red-200';
+            icon.innerHTML = '<i class="fas fa-exclamation-circle text-red-500 text-xl"></i>';
+        }
+
+        // Show message
+        container.classList.remove('hidden');
+
+        // Hide message after 5 seconds
+        setTimeout(() => {
+            container.classList.add('hidden');
+        }, 5000);
+    }
+});
+</script>
+@endpush

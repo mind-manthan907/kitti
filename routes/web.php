@@ -151,4 +151,10 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     
     // Reports
     Route::get('/reports', [AdminController::class, 'reports'])->name('reports');
+    
+    // KYC Management
+    Route::get('/kyc', [AdminController::class, 'kycDocuments'])->name('kyc.index');
+    Route::get('/kyc/{kycDocument}', [AdminController::class, 'showKycDocument'])->name('kyc.show');
+    Route::post('/kyc/{kycDocument}/approve', [AdminController::class, 'approveKycDocument'])->name('kyc.approve');
+    Route::post('/kyc/{kycDocument}/reject', [AdminController::class, 'rejectKycDocument'])->name('kyc.reject');
 });

@@ -25,6 +25,9 @@
                     <a href="{{ route('admin.users.index') }}" class="text-indigo-600 hover:text-indigo-500 px-3 py-2 rounded-md text-sm font-medium">
                         <i class="fas fa-users mr-2"></i>Users
                     </a>
+                    <a href="{{ route('admin.kyc.index') }}" class="text-indigo-600 hover:text-indigo-500 px-3 py-2 rounded-md text-sm font-medium">
+                        <i class="fas fa-id-card mr-2"></i>KYC Documents
+                    </a>
                     <a href="{{ route('admin.registrations.index') }}" class="text-indigo-600 hover:text-indigo-500 px-3 py-2 rounded-md text-sm font-medium">
                         <i class="fas fa-user-plus mr-2"></i>Registrations
                     </a>
@@ -178,6 +181,22 @@
                             <dl>
                                 <dt class="text-sm font-medium text-gray-500 truncate">Blocked Users</dt>
                                 <dd class="text-lg font-medium text-gray-900">{{ $stats['blocked_users'] ?? 0 }}</dd>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white overflow-hidden shadow rounded-lg">
+                <div class="p-5">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-id-card text-purple-600 text-2xl"></i>
+                        </div>
+                        <div class="ml-5 w-0 flex-1">
+                            <dl>
+                                <dt class="text-sm font-medium text-gray-500 truncate">Pending KYC</dt>
+                                <dd class="text-lg font-medium text-gray-900">{{ $stats['pending_kyc'] ?? 0 }}</dd>
                             </dl>
                         </div>
                     </div>

@@ -1,6 +1,35 @@
 @extends('layouts.app')
 
 @section('content')
+@if(session('success'))
+<div class="fixed top-4 right-4 z-50 transition-all duration-300 ease-in-out">
+    <div class="p-4 rounded-lg shadow-lg max-w-md bg-green-50 border border-green-200">
+        <div class="flex items-center">
+            <div class="flex-shrink-0 mr-3">
+                <i class="fas fa-check-circle text-green-500 text-xl"></i>
+            </div>
+            <div>
+                <p class="text-sm font-medium text-green-800">{{ session('success') }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+@endif
+
+@if(session('error'))
+<div class="fixed top-4 right-4 z-50 transition-all duration-300 ease-in-out">
+    <div class="p-4 rounded-lg shadow-lg max-w-md bg-red-50 border border-red-200">
+        <div class="flex items-center">
+            <div class="flex-shrink-0 mr-3">
+                <i class="fas fa-exclamation-circle text-red-500 text-xl"></i>
+            </div>
+            <div>
+                <p class="text-sm font-medium text-red-800">{{ session('error') }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+@endif
 <div class="container mx-auto px-4 py-8">
     <div class="max-w-4xl mx-auto">
         <!-- Header -->
@@ -93,14 +122,17 @@
                                         <span class="text-xs text-gray-500">
                                             Verified: {{ $document->verified_at->format('M d, Y') }}
                                         </span>
-                                    @elseif($document->status === 'rejected')
-                                        <a href="{{ route('user.profile.kyc.show', $document) }}" 
-                                           class="text-red-600 hover:text-red-900">
-                                            <i class="fas fa-eye"></i>
-                                        </a>
-                                        <div class="text-xs text-red-600 max-w-xs">
-                                            {{ $document->rejection_reason }}
-                                        </div>
+                                                                         @elseif($document->status === 'rejected')
+                                         <a href="{{ route('user.profile.kyc.show', $document) }}" 
+                                            class="text-red-600 hover:text-red-900">
+                                             <i class="fas fa-eye"></i>
+                                         </a>
+                                         <div class="text-xs text-red-600 max-w-xs">
+                                             <strong>Reason:</strong> {{ $document->rejection_reason }}
+                                             @if($document->admin_notes)
+                                                 <br><strong>Admin Notes:</strong> {{ $document->admin_notes }}
+                                             @endif
+                                         </div>
                                     @endif
                                 </div>
                             </div>
@@ -142,4 +174,23 @@
         </div>
     </div>
 </div>
+
 @endsection
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-hide session messages after 
+    const messages = document.querySelectorAll('.fixed.top-4.right-4.z-50');
+    messages.forEach(message => {
+        setTimeout(() => {
+            message.style.opacity = '0';
+            message.style.transform = 'translateY(-100%)';
+            setTimeout(() => {
+                message.remove();
+            }, 300);
+        }, 3000);
+    });
+});
+</script>
+@endpush

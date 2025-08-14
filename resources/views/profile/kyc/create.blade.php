@@ -11,7 +11,7 @@
 
         <!-- Upload Form -->
         <div class="bg-white rounded-lg shadow p-6">
-            <form method="POST" action="{{ route('user.profile.kyc.store') }}" enctype="multipart/form-data">
+            <form id="kyc-upload-form" method="POST" action="{{ route('user.profile.kyc.store') }}" enctype="multipart/form-data">
                 @csrf
                 
                 <!-- Document Type -->
@@ -72,13 +72,24 @@
                     </div>
                 </div>
 
+                                <!-- Progress Bar -->
+                <div id="upload-progress" class="hidden mb-6">
+                    <div class="mb-2 flex justify-between text-sm text-gray-600">
+                        <span>Uploading...</span>
+                        <span id="progress-percentage">0%</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2">
+                        <div id="progress-bar" class="bg-indigo-600 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+                    </div>
+                </div>
+
                 <!-- Submit Buttons -->
                 <div class="flex justify-between">
-                                            <a href="{{ route('user.profile.kyc.index') }}" 
-                           class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded-md text-sm font-medium">
-                            <i class="fas fa-arrow-left mr-2"></i>Back to KYC
-                        </a>
-                    <button type="submit" 
+                    <a href="{{ route('user.profile.kyc.index') }}" 
+                       class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded-md text-sm font-medium">
+                        <i class="fas fa-arrow-left mr-2"></i>Back to KYC
+                    </a>
+                    <button type="submit" id="submit-btn"
                             class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-md text-sm font-medium">
                         <i class="fas fa-upload mr-2"></i>Upload Document
                     </button>
@@ -87,4 +98,132 @@
         </div>
     </div>
 </div>
+
+<!-- Response Messages -->
+<div id="message-container" class="fixed top-4 right-4 z-50 hidden">
+    <div id="message-content" class="p-4 rounded-lg shadow-lg max-w-md">
+        <div class="flex items-center">
+            <div id="message-icon" class="flex-shrink-0 mr-3"></div>
+            <div>
+                <p id="message-text" class="text-sm font-medium"></p>
+            </div>
+        </div>
+    </div>
+</div>
+
 @endsection
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('kyc-upload-form');
+    const progressContainer = document.getElementById('upload-progress');
+    const progressBar = document.getElementById('progress-bar');
+    const progressPercentage = document.getElementById('progress-percentage');
+    const submitBtn = document.getElementById('submit-btn');
+
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        // Show progress bar
+        progressContainer.classList.remove('hidden');
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Uploading...';
+        
+        // Simulate progress (since we can't get real upload progress with regular form submission)
+        let progress = 0;
+        const progressInterval = setInterval(() => {
+            progress += Math.random() * 15;
+            if (progress > 90) progress = 90;
+            
+            progressBar.style.width = progress + '%';
+            progressPercentage.textContent = Math.round(progress) + '%';
+        }, 200);
+
+        // Submit form
+        const formData = new FormData(form);
+        
+        fetch(form.action, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            }
+        })
+        .then(response => response.text())
+        .then(html => {
+            // Complete progress
+            clearInterval(progressInterval);
+            progressBar.style.width = '100%';
+            progressPercentage.textContent = '100%';
+            
+            // Check if there are validation errors
+            if (html.includes('error')) {
+                // Parse HTML to check for validation errors
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const errorElements = doc.querySelectorAll('.text-red-600');
+                
+                if (errorElements.length > 0) {
+                    // Show validation errors
+                    showMessage('Please fix the validation errors below.', 'error');
+                    // Replace form content with new HTML (preserving errors)
+                    document.querySelector('.bg-white.rounded-lg.shadow.p-6').innerHTML = 
+                        doc.querySelector('.bg-white.rounded-lg.shadow.p-6').innerHTML;
+                } else {
+                    showMessage('Upload failed. Please try again.', 'error');
+                }
+            } else {
+                // Success - redirect
+                showMessage('KYC document uploaded successfully! Redirecting...', 'success');
+                setTimeout(() => {
+                    window.location.href = '{{ route("user.profile.kyc.index") }}';
+                }, 2000);
+            }
+        })
+        .catch(error => {
+            clearInterval(progressInterval);
+            console.error('Error:', error);
+            showMessage('Upload failed. Please try again.', 'error');
+        })
+        .finally(() => {
+            // Reset form state
+            setTimeout(() => {
+                progressContainer.classList.add('hidden');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-upload mr-2"></i>Upload Document';
+                progressBar.style.width = '0%';
+                progressPercentage.textContent = '0%';
+            }, 1000);
+        });
+    });
+
+    function showMessage(message, type) {
+        const container = document.getElementById('message-container');
+        const content = document.getElementById('message-content');
+        const icon = document.getElementById('message-icon');
+        const text = document.getElementById('message-text');
+
+        // Set message content
+        text.textContent = message;
+
+        // Set styling based on type
+        if (type === 'success') {
+            content.className = 'p-4 rounded-lg shadow-lg max-w-md bg-green-50 border border-green-200';
+            icon.innerHTML = '<i class="fas fa-check-circle text-green-500 text-xl"></i>';
+        } else {
+            content.className = 'p-4 rounded-lg shadow-lg max-w-md bg-red-50 border border-red-200';
+            icon.innerHTML = '<i class="fas fa-exclamation-circle text-red-500 text-xl"></i>';
+        }
+
+        // Show message
+        container.classList.remove('hidden');
+
+        // Hide message after 5 seconds
+        setTimeout(() => {
+            container.classList.add('hidden');
+        }, 5000);
+    }
+});
+</script>
+@endpush
