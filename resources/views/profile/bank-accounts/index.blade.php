@@ -39,7 +39,7 @@
                 <p class="mt-2 text-gray-600">Manage your bank accounts for investment plans</p>
             </div>
             <a href="{{ route('user.profile.bank-accounts.create') }}" 
-               class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+               class="bg-golden-500 hover:bg-golden-700 text-white px-4 py-2 rounded-md text-sm font-medium">
                 <i class="fas fa-plus mr-2"></i>Add New Bank Account
             </a>
         </div>
@@ -125,8 +125,8 @@
                     </div>
                     <h3 class="text-lg font-medium text-gray-900 mb-2">No bank accounts added</h3>
                     <p class="text-gray-500 mb-4">You need to add at least one bank account to create investment plans.</p>
-                                            <a href="{{ route('user.profile.bank-accounts.create') }}" 
-                           class="bg-indigo-600 hover:bg-indigo-700 text-sm font-medium">
+                    <a href="{{ route('user.profile.bank-accounts.create') }}" 
+                           class="bg-golden-500 hover:bg-golden-700 text-white px-4 py-2 rounded-md text-sm font-medium">
                             <i class="fas fa-plus mr-2"></i>Add First Bank Account
                         </a>
                 </div>

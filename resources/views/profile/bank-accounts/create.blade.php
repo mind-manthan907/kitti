@@ -112,7 +112,7 @@
                         <i class="fas fa-arrow-left mr-2"></i>Back to Accounts
                     </a>
                     <button type="submit" id="submit-btn"
-                            class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-md text-sm font-medium">
+                            class="bg-golden-500 hover:bg-golden-700 text-white px-6 py-2 rounded-md text-sm font-medium">
                         <i class="fas fa-plus mr-2"></i>Add Account
                     </button>
                 </div>

@@ -105,8 +105,8 @@
                 </div>
 
                 <div class="flex items-end">
-                    <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm font-medium">
-                        <i class="fas fa-search mr-2"></i>Filter
+                    <button type="submit" class="w-full bg-golden-500 hover:bg-golden-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+                        <i class="fas fa-search mr-2"></i>Apply Filters
                     </button>
                 </div>
             </form>

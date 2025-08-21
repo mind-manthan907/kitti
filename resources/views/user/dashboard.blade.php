@@ -7,6 +7,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ asset('css/golden.css') }}">
 </head>
 <body class="bg-gray-50">
     <!-- Navigation -->
@@ -15,20 +16,22 @@
             <div class="flex justify-between h-16">
                 <div class="flex items-center">
                     <div class="flex-shrink-0">
-                        <h1 class="text-xl font-bold text-indigo-600">KITTI</h1>
+                        <h1 class="text-xl font-bold text-indigo-600">
+                            <img src="{{ asset('logo.png') }}" alt="Kitti" class="h-10 w-auto">
+                        </h1>
                     </div>
                 </div>
                 <div class="flex items-center space-x-4">
                     <span class="text-gray-700">Welcome, {{ auth()->user()->name }}</span>
-                    <a href="{{ route('user.profile') }}" class="text-indigo-600 hover:text-indigo-500 px-3 py-2 rounded-md text-sm font-medium">
+                    <a href="{{ route('user.profile') }}" class="text-golden-600 hover:text-golden-700 px-3 py-2 rounded-md text-sm font-medium">
                         <i class="fas fa-user-circle mr-2"></i>Profile
                     </a>
-                    <a href="{{ route('user.payment-history') }}" class="text-indigo-600 hover:text-indigo-500 px-3 py-2 rounded-md text-sm font-medium">
+                    <a href="{{ route('user.payment-history') }}" class="text-golden-600 hover:text-golden-700 px-3 py-2 rounded-md text-sm font-medium">
                         <i class="fas fa-history mr-2"></i>Payment History
                     </a>
                     <form method="POST" action="{{ route('auth.logout') }}" class="inline">
                         @csrf
-                        <button type="submit" class="text-red-600 hover:text-red-500 px-3 py-2 rounded-md text-sm font-medium">
+                        <button type="submit" class="text-red-600 hover:text-red-700 px-3 py-2 rounded-md text-sm font-medium">
                             <i class="fas fa-sign-out-alt mr-2"></i>Logout
                         </button>
                     </form>
@@ -141,7 +144,7 @@
             <div class="flex items-center justify-between mb-4">
                 <h2 class="text-lg font-medium text-gray-900">Investment Plans</h2>
                 @if($user->hasVerifiedKyc() && $user->hasBankAccount())
-                    <a href="{{ route('registration.investment-plan') }}" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+                    <a href="{{ route('registration.investment-plan') }}" class="bg-golden-500 hover:bg-golden-700 text-white px-4 py-2 rounded-md text-sm font-medium">
                         <i class="fas fa-plus mr-2"></i>Create New Plan
                     </a>
                 @else
@@ -182,14 +185,14 @@
                 </div>
             @else
                 <div class="text-center py-8">
-                    <div class="text-gray-400 mb-4">
+                    <div class="text-golden-700 mb-4">
                         <i class="fas fa-chart-line text-6xl"></i>
                     </div>
                     <h3 class="text-lg font-medium text-gray-900 mb-2">No Investment Plans</h3>
                     <p class="text-gray-500 mb-4">Start your investment journey by creating a new plan</p>
                     @if($user->hasVerifiedKyc() && $user->hasBankAccount())
                         <a href="{{ route('registration.investment-plan') }}" 
-                           class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-md text-sm font-medium">
+                           class="bg-golden-500 hover:bg-golden-700 text-white px-6 py-2 rounded-md text-sm font-medium">
                             <i class="fas fa-plus mr-2"></i>Create First Plan
                         </a>
                     @else

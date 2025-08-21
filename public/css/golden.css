@@ -1,0 +1,46 @@
+:root {
+  --golden-50:  #fffdf5;
+  --golden-100: #fef3c7;
+  --golden-200: #fde68a;
+  --golden-300: #fcd34d;
+  --golden-400: #fbbf24;
+  --golden-500: #d4af37; /* main golden */
+  --golden-600: #ca8a04;
+  --golden-700: #b8860b;
+  --golden-800: #92400e;
+  --golden-900: #78350f;
+}
+
+/* background */
+.bg-golden-50  { background-color: var(--golden-50) !important; }
+.bg-golden-100 { background-color: var(--golden-100) !important; }
+.bg-golden-200 { background-color: var(--golden-200) !important; }
+.bg-golden-300 { background-color: var(--golden-300) !important; }
+.bg-golden-400 { background-color: var(--golden-400) !important; }
+.bg-golden-500 { background-color: var(--golden-500) !important; }
+.bg-golden-600 { background-color: var(--golden-600) !important; }
+.bg-golden-700 { background-color: var(--golden-700) !important; }
+.bg-golden-800 { background-color: var(--golden-800) !important; }
+.bg-golden-900 { background-color: var(--golden-900) !important; }
+
+/* text */
+.text-golden-50  { color: var(--golden-50) !important; }
+.text-golden-100 { color: var(--golden-100) !important; }
+.text-golden-200 { color: var(--golden-200) !important; }
+.text-golden-300 { color: var(--golden-300) !important; }
+.text-golden-400 { color: var(--golden-400) !important; }
+.text-golden-500 { color: var(--golden-500) !important; }
+.text-golden-600 { color: var(--golden-600) !important; }
+.text-golden-700 { color: var(--golden-700) !important; }
+.text-golden-800 { color: var(--golden-800) !important; }
+.text-golden-900 { color: var(--golden-900) !important; }
+
+/* border */
+.border-golden-500 { border-color: var(--golden-500) !important; }
+
+/* hover */
+.hover\:bg-golden-500:hover { background-color: var(--golden-500) !important; }
+.hover\:bg-golden-700:hover { background-color: var(--golden-700) !important; }
+
+.hover\:text-golden-500:hover { color: var(--golden-500) !important; }
+.hover\:text-golden-700:hover { color: var(--golden-700) !important; }

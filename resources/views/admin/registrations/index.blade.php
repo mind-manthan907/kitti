@@ -1,39 +1,6 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Registrations - KITTI Admin</title>
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-</head>
-<body class="bg-gray-100">
-    <!-- Navigation -->
-    <nav class="bg-white shadow-lg">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between h-16">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0">
-                        <a href="{{ route('admin.dashboard') }}" class="text-2xl font-bold text-indigo-600">KITTI Admin</a>
-                    </div>
-                    <div class="ml-10 flex items-baseline space-x-4">
-                        <a href="{{ route('admin.dashboard') }}" class="text-gray-500 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium">Dashboard</a>
-                        <a href="{{ route('admin.registrations.index') }}" class="bg-indigo-100 text-indigo-700 px-3 py-2 rounded-md text-sm font-medium">Registrations</a>
-                        <a href="{{ route('admin.payments.index') }}" class="text-gray-500 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium">Payments</a>
-                        <a href="{{ route('admin.discontinue-requests.index') }}" class="text-gray-500 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium">Discontinue Requests</a>
-                    </div>
-                </div>
-                <div class="flex items-center space-x-4">
-                    <span class="text-gray-700">Welcome, {{ auth()->user()->name }}</span>
-                    <form method="POST" action="{{ route('auth.logout') }}" class="inline">
-                        @csrf
-                        <button type="submit" class="text-gray-700 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium">Logout</button>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </nav>
+@extends('layouts.admin')
 
+@section('content')
     <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <!-- Page Header -->
         <div class="px-4 py-6 sm:px-0">
@@ -72,7 +39,7 @@
                     <input type="date" name="date_to" value="{{ request('date_to') }}" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
                 </div>
                 <div class="md:col-span-4">
-                    <button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700">Apply Filters</button>
+                    <button type="submit" class="bg-golden-500 hover:bg-golden-700 text-white px-4 py-2 rounded-md hover:bg-indigo-700">Apply Filters</button>
                     <a href="{{ route('admin.registrations.index') }}" class="ml-2 bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600">Clear</a>
                 </div>
             </form>
@@ -179,6 +146,5 @@
             }
         }
     </script>
-</body>
-</html>
+@endsection
 

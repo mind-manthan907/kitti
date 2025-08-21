@@ -73,7 +73,7 @@ Route::prefix('auth')->name('auth.')->group(function () {
 Route::middleware(['auth'])->prefix('user')->name('user.')->group(function () {
     Route::get('/dashboard', [UserController::class, 'dashboard'])->name('dashboard');
     Route::get('/profile', [UserController::class, 'profile'])->name('profile');
-    Route::post('/profile', [UserController::class, 'updateProfile'])->name('profile.update');
+    Route::put('/profile', [UserController::class, 'updateProfile'])->name('profile.update');
     Route::get('/payment-history', [UserController::class, 'paymentHistory'])->name('payment-history');
     Route::get('/download-receipt/{payment}', [UserController::class, 'downloadReceipt'])->name('download-receipt');
     Route::post('/request-discontinue', [UserController::class, 'requestDiscontinue'])->name('request-discontinue');

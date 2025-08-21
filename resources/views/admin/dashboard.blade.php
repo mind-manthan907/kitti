@@ -1,57 +1,6 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard - KITTI Investment Platform</title>
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-</head>
-<body class="bg-gray-100">
-    <!-- Navigation -->
-    <nav class="bg-white shadow-lg">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between h-16">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0">
-                        <h1 class="text-2xl font-bold text-indigo-600">KITTI Admin</h1>
-                    </div>
-                </div>
-                <div class="flex items-center space-x-4">
-                    <a href="{{ route('admin.dashboard') }}" class="text-indigo-600 hover:text-indigo-500 px-3 py-2 rounded-md text-sm font-medium">
-                        <i class="fas fa-tachometer-alt mr-2"></i>Dashboard
-                    </a>
-                    <a href="{{ route('admin.users.index') }}" class="text-indigo-600 hover:text-indigo-500 px-3 py-2 rounded-md text-sm font-medium">
-                        <i class="fas fa-users mr-2"></i>Users
-                    </a>
-                    <a href="{{ route('admin.kyc.index') }}" class="text-indigo-600 hover:text-indigo-500 px-3 py-2 rounded-md text-sm font-medium">
-                        <i class="fas fa-id-card mr-2"></i>KYC Documents
-                    </a>
-                    <a href="{{ route('admin.registrations.index') }}" class="text-indigo-600 hover:text-indigo-500 px-3 py-2 rounded-md text-sm font-medium">
-                        <i class="fas fa-user-plus mr-2"></i>Registrations
-                    </a>
-                    <a href="{{ route('admin.payments.index') }}" class="text-indigo-600 hover:text-indigo-500 px-3 py-2 rounded-md text-sm font-medium">
-                        <i class="fas fa-credit-card mr-2"></i>Payments
-                    </a>
-                    <a href="{{ route('admin.discontinue-requests.index') }}" class="text-indigo-600 hover:text-indigo-500 px-3 py-2 rounded-md text-sm font-medium">
-                        <i class="fas fa-stop-circle mr-2"></i>Discontinue
-                    </a>
-                    <a href="{{ route('admin.monthly-dues') }}" class="text-indigo-600 hover:text-indigo-500 px-3 py-2 rounded-md text-sm font-medium">
-                        <i class="fas fa-calendar-alt mr-2"></i>Monthly Dues
-                    </a>
-                    <a href="{{ route('admin.reports') }}" class="text-indigo-600 hover:text-indigo-500 px-3 py-2 rounded-md text-sm font-medium">
-                        <i class="fas fa-chart-bar mr-2"></i>Reports
-                    </a>
-                    <span class="text-gray-700">Welcome, {{ auth()->user()->name }}</span>
-                    <form method="POST" action="{{ route('auth.logout') }}" class="inline">
-                        @csrf
-                        <button type="submit" class="text-gray-700 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium">Logout</button>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </nav>
+@extends('layouts.admin')
+
+@section('content')
 
     <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <!-- Stats Grid -->
@@ -294,7 +243,7 @@
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <div class="text-sm text-gray-900">₹{{ number_format($registration->plan_amount) }}</div>
                                     <div class="text-sm text-gray-500">
-                                        {{ $registration->duration_months }} months | 
+                                        {{ $registration->duration_months }} months |
                                         Maturity: {{ $registration->maturity_date->format('M d, Y') }}
                                     </div>
                                 </td>
@@ -308,21 +257,21 @@
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                     @if($registration->payment_status === 'pending')
-                                        <button class="text-green-600 hover:text-green-900 mr-3" 
-                                                onclick="updatePaymentStatus({{ $registration->id }}, 'success')">
-                                            Mark Paid
-                                        </button>
-                                        <button class="text-red-600 hover:text-red-900" 
-                                                onclick="updatePaymentStatus({{ $registration->id }}, 'failed')">
-                                            Mark Failed
-                                        </button>
+                                    <button class="text-green-600 hover:text-green-900 mr-3"
+                                        onclick="updatePaymentStatus({{ $registration->id }}, 'success')">
+                                        Mark Paid
+                                    </button>
+                                    <button class="text-red-600 hover:text-red-900"
+                                        onclick="updatePaymentStatus({{ $registration->id }}, 'failed')">
+                                        Mark Failed
+                                    </button>
                                     @elseif($registration->payment_status === 'failed')
-                                        <button class="text-green-600 hover:text-green-900" 
-                                                onclick="updatePaymentStatus({{ $registration->id }}, 'success')">
-                                            Mark Paid
-                                        </button>
+                                    <button class="text-green-600 hover:text-green-900"
+                                        onclick="updatePaymentStatus({{ $registration->id }}, 'success')">
+                                        Mark Paid
+                                    </button>
                                     @else
-                                        <span class="text-green-600">Payment Complete</span>
+                                    <span class="text-green-600">Payment Complete</span>
                                     @endif
                                 </td>
                             </tr>
@@ -352,7 +301,7 @@
                             <p class="text-sm text-gray-500">Enable/disable users</p>
                         </div>
                     </a>
-                    
+
                     <a href="{{ route('admin.monthly-dues') }}" class="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
                         <i class="fas fa-calendar-alt text-2xl text-blue-600 mr-3"></i>
                         <div>
@@ -360,7 +309,7 @@
                             <p class="text-sm text-gray-500">Track overdue payments</p>
                         </div>
                     </a>
-                    
+
                     <a href="{{ route('admin.system-config') }}" class="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
                         <i class="fas fa-cog text-2xl text-green-600 mr-3"></i>
                         <div>
@@ -384,7 +333,7 @@
                             <p class="text-sm text-gray-500">Review and approve</p>
                         </div>
                     </a>
-                    
+
                     <a href="{{ route('admin.investment-plans.index') }}" class="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
                         <i class="fas fa-chart-line text-2xl text-green-600 mr-3"></i>
                         <div>
@@ -454,31 +403,27 @@
             }
 
             fetch(`/admin/registrations/${registrationId}/update-payment-status`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                },
-                body: JSON.stringify({ payment_status: status })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    location.reload();
-                } else {
-                    alert('Error updating payment status: ' + data.message);
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Error updating payment status. Please try again.');
-            });
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    },
+                    body: JSON.stringify({
+                        payment_status: status
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        location.reload();
+                    } else {
+                        alert('Error updating payment status: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error updating payment status. Please try again.');
+                });
         }
     </script>
-</body>
-</html>
-
-
-
-
-
+@endsection

@@ -88,17 +88,16 @@ class UserController extends Controller
                 'upi_id' => $request->upi_id,
             ]);
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Profile updated successfully!'
-            ]);
+            return redirect()->route('user.profile')
+                ->with('success', 'Profile updated successfully!');
 
         } catch (\Exception $e) {
             \Log::error('Error updating profile: ' . $e->getMessage());
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to update profile. Please try again.'
-            ], 500);
+
+            return redirect()->route('user.profile')
+                ->with('success', 'Failed to update profile. Please try again.');
+
+
         }
     }
 

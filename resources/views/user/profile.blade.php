@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,7 +8,9 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ asset('css/golden.css') }}">
 </head>
+
 <body class="bg-gray-50">
     <!-- Navigation -->
     <nav class="bg-white shadow-lg">
@@ -15,20 +18,23 @@
             <div class="flex justify-between h-16">
                 <div class="flex items-center">
                     <div class="flex-shrink-0">
-                        <a href="{{ route('user.dashboard') }}" class="text-xl font-bold text-indigo-600">KITTI</a>
+                        <a href="{{ route('user.dashboard') }}" class="text-xl font-bold text-indigo-600">
+                            <img src="{{ asset('logo.png') }}" alt="Kitti" class="h-10 w-auto">
+
+                        </a>
                     </div>
                 </div>
                 <div class="flex items-center space-x-4">
                     <span class="text-gray-700">Welcome, {{ auth()->user()->name }}</span>
-                    <a href="{{ route('user.dashboard') }}" class="text-indigo-600 hover:text-indigo-500 px-3 py-2 rounded-md text-sm font-medium">
+                    <a href="{{ route('user.dashboard') }}" class="text-golden-600 hover:text-golden-700 px-3 py-2 rounded-md text-sm font-medium">
                         <i class="fas fa-tachometer-alt mr-2"></i>Dashboard
                     </a>
-                    <a href="{{ route('user.profile') }}" class="bg-indigo-100 text-indigo-700 px-3 py-2 rounded-md text-sm font-medium">
+                    <a href="{{ route('user.profile') }}" class="bg-golden-100 text-golden-600 hover:text-golden-700 px-3 py-2 rounded-md text-sm font-medium">
                         <i class="fas fa-user-circle mr-2"></i>Profile
                     </a>
                     <form method="POST" action="{{ route('auth.logout') }}" class="inline">
                         @csrf
-                        <button type="submit" class="text-red-600 hover:text-red-500 px-3 py-2 rounded-md text-sm font-medium">
+                        <button type="submit" class="text-red-600 hover:text-red-700 px-3 py-2 rounded-md text-sm font-medium">
                             <i class="fas fa-sign-out-alt mr-2"></i>Logout
                         </button>
                     </form>
@@ -57,7 +63,7 @@
             <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
                 <ul class="list-disc list-inside">
                     @foreach($errors->all() as $error)
-                        <li>{{ $error }}</li>
+                    <li>{{ $error }}</li>
                     @endforeach
                 </ul>
             </div>
@@ -78,37 +84,37 @@
                         <div class="px-4 py-5 sm:p-6 space-y-6">
                             <div>
                                 <label for="name" class="block text-sm font-medium text-gray-700">Full Name</label>
-                                <input type="text" name="name" id="name" value="{{ old('name', $user->name) }}" 
-                                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" required>
+                                <input type="text" name="name" id="name" value="{{ old('name', $user->name) }}"
+                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" required>
                             </div>
 
                             <div>
                                 <label for="email" class="block text-sm font-medium text-gray-700">Email Address</label>
-                                <input type="email" name="email" id="email" value="{{ old('email', $user->email) }}" 
-                                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" required>
+                                <input type="email" name="email" id="email" value="{{ old('email', $user->email) }}"
+                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" required>
                             </div>
 
                             <div>
                                 <label for="current_password" class="block text-sm font-medium text-gray-700">Current Password</label>
-                                <input type="password" name="current_password" id="current_password" 
-                                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                <input type="password" name="current_password" id="current_password"
+                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
                                 <p class="mt-1 text-sm text-gray-500">Leave blank if you don't want to change password</p>
                             </div>
 
                             <div>
                                 <label for="new_password" class="block text-sm font-medium text-gray-700">New Password</label>
-                                <input type="password" name="new_password" id="new_password" 
-                                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                <input type="password" name="new_password" id="new_password"
+                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
                             </div>
 
                             <div>
                                 <label for="new_password_confirmation" class="block text-sm font-medium text-gray-700">Confirm New Password</label>
-                                <input type="password" name="new_password_confirmation" id="new_password_confirmation" 
-                                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                <input type="password" name="new_password_confirmation" id="new_password_confirmation"
+                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
                             </div>
 
                             <div class="flex justify-end">
-                                <button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700">
+                                <button type="submit" class="bg-golden-500 text-white px-4 py-2 rounded-md hover:bg-golden-700">
                                     Update Profile
                                 </button>
                             </div>
@@ -158,7 +164,7 @@
                     <div class="px-4 py-5 sm:p-6 text-center">
                         <i class="fas fa-chart-line text-4xl text-gray-400 mb-4"></i>
                         <p class="text-gray-500">No investment plan found</p>
-                        <a href="{{ route('registration.create') }}" class="mt-4 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700">
+                        <a href="{{ route('registration.create') }}" class="mt-4 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-golden-500 hover:bg-golden-700">
                             Join Investment Plan
                         </a>
                     </div>
@@ -168,5 +174,5 @@
         </div>
     </div>
 </body>
-</html>
 
+</html>

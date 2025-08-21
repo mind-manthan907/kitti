@@ -106,7 +106,7 @@ class User extends Authenticatable
      */
     public function discontinueRequests(): HasMany
     {
-        return $this->hasMany(DiscontinueRequest::class, 'email', 'email');
+        return $this->hasMany(DiscontinueRequest::class, 'kitti_registration_id', 'kitti_registration_id');
     }
 
     /**

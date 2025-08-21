@@ -39,7 +39,7 @@
                 <p class="mt-2 text-gray-600">Manage your identity verification documents</p>
             </div>
             <a href="{{ route('user.profile.kyc.create') }}" 
-               class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+               class="bg-golden-500 hover:bg-golden-700 text-white px-4 py-2 rounded-md text-sm font-medium">
                 <i class="fas fa-plus mr-2"></i>Upload New Document
             </a>
         </div>
@@ -156,14 +156,14 @@
         </div>
 
         <!-- Important Notice -->
-        <div class="mt-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+        <div class="mt-6 bg-golden-200 border border-yellow-200 rounded-lg p-4">
             <div class="flex">
                 <div class="flex-shrink-0">
-                    <i class="fas fa-exclamation-triangle text-yellow-400"></i>
+                    <i class="fas fa-exclamation-triangle text-golden-600"></i>
                 </div>
                 <div class="ml-3">
-                    <h3 class="text-sm font-medium text-yellow-800">Important Notice</h3>
-                    <div class="mt-2 text-sm text-yellow-700">
+                    <h3 class="text-sm font-medium text-golden-900">Important Notice</h3>
+                    <div class="mt-2 text-sm text-golden-800">
                         <p>• KYC verification is mandatory before creating investment plans</p>
                         <p>• Document verification typically takes 24-48 hours</p>
                         <p>• If rejected, please re-upload with correct information</p>

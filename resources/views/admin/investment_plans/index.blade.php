@@ -1,11 +1,11 @@
-@extends('admin.layouts.app')
+@extends('layouts.admin')
 
 @section('content')
 <div class="container mx-auto px-4 py-8">
     <div class="flex justify-between items-center mb-6">
         <h1 class="text-3xl font-bold text-gray-900">Investment Plans Management</h1>
         <a href="{{ route('admin.investment-plans.create') }}" 
-           class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+           class="bg-golden-500 hover:bg-golden-700 text-white px-4 py-2 rounded-md text-sm font-medium">
             <i class="fas fa-plus mr-2"></i>Create New Plan
         </a>
     </div>

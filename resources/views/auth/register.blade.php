@@ -6,20 +6,21 @@
     <title>Register - KITTI Investment Platform</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ asset('css/golden.css') }}">
 </head>
 <body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
     <div class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
         <div class="max-w-md w-full space-y-8">
             <div>
                 <div class="mx-auto h-12 w-12 flex items-center justify-center rounded-full bg-indigo-100">
-                    <i class="fas fa-user-plus text-indigo-600 text-xl"></i>
+                    <i class="fas fa-user-plus text-golden-500 text-xl"></i>
                 </div>
-                <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
+                <h2 class="mt-6 text-center text-3xl font-extrabold text-golden-500">
                     Create your account
                 </h2>
                 <p class="mt-2 text-center text-sm text-gray-600">
                     Or
-                    <a href="{{ route('auth.login') }}" class="font-medium text-indigo-600 hover:text-indigo-500">
+                    <a href="{{ route('auth.login') }}" class="font-medium text-golden-500 hover:text-golden-700">
                         sign in to your existing account
                     </a>
                 </p>
@@ -69,15 +70,15 @@
                            class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
                     <label for="terms" class="ml-2 block text-sm text-gray-900">
                         I agree to the 
-                        <a href="#" class="font-medium text-indigo-600 hover:text-indigo-500">Terms and Conditions</a>
+                        <a href="#" class="font-medium text-golden-500 hover:text-golden-700">Terms and Conditions</a>
                     </label>
                 </div>
 
                 <div>
                     <button type="submit" 
-                            class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                            class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-golden-500 hover:bg-golden-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                         <span class="absolute left-0 inset-y-0 flex items-center pl-3">
-                            <i class="fas fa-user-plus text-indigo-500 group-hover:text-indigo-400"></i>
+                            <i class="fas fa-user-plus text-golden-800 group-hover:text-golden-900"></i>
                         </span>
                         Create Account
                     </button>
@@ -86,7 +87,7 @@
                 <div class="text-center">
                     <p class="text-sm text-gray-600">
                         Already have an account? 
-                        <a href="{{ route('auth.login') }}" class="font-medium text-indigo-600 hover:text-indigo-500">
+                        <a href="{{ route('auth.login') }}" class="font-medium text-golden-500 hover:text-indigo-700">
                             Sign in
                         </a>
                     </p>
