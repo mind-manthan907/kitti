@@ -8,6 +8,7 @@ use App\Models\DiscontinueRequest;
 use App\Models\AuditLog;
 use App\Models\SystemConfig;
 use App\Models\User;
+use App\Models\InvestmentPlan;
 use App\Models\KycDocument;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -58,6 +59,7 @@ class AdminController extends Controller
      */
     public function registrations(Request $request)
     {
+        $plans = InvestmentPlan::orderBy('amount')->paginate(10);
         $query = KittiRegistration::with(['latestPayment', 'approvedBy']);
 
         // Apply filters
@@ -66,7 +68,7 @@ class AdminController extends Controller
         }
 
         if ($request->filled('plan_amount')) {
-            $query->where('plan_amount', $request->plan_amount);
+            $query->where('plan_id', $request->plan_amount);
         }
 
         if ($request->filled('date_from')) {
@@ -79,7 +81,7 @@ class AdminController extends Controller
 
         $registrations = $query->latest()->paginate(20);
 
-        return view('admin.registrations.index', compact('registrations'));
+        return view('admin.registrations.index', compact('registrations','plans'));
     }
 
     /**
@@ -306,7 +308,7 @@ class AdminController extends Controller
         $approvedCount = DiscontinueRequest::where('status', 'approved')->count();
         $rejectedCount = DiscontinueRequest::where('status', 'rejected')->count();
 
-        return view('admin.discontinue_requests.index', compact('requests', 'pendingCount', 'approvedCount', 'rejectedCount'));
+        return view('admin.discontinue-requests.index', compact('requests', 'pendingCount', 'approvedCount', 'rejectedCount'));
     }
 
     /**

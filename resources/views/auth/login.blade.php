@@ -12,8 +12,8 @@
     <div class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
         <div class="max-w-md w-full space-y-8">
             <div>
-                <div class="mx-auto h-12 w-12 flex items-center justify-center rounded-full bg-indigo-100">
-                    <i class="fas fa-chart-line text-golden-500 text-xl"></i>
+                <div class="mx-auto h-12 w-100 flex items-center justify-center rounded-full">
+                    <img src="{{ asset('logo.png') }}" alt="Kitti" class="h-10 w-auto">
                 </div>
                 <h2 class="mt-6 text-center text-3xl font-extrabold text-golden-500 hover:text-golden-700">
                     Sign in to your account
