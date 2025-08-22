@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KITTI - @yield('title', 'Dashboard')</title>
+    <title>User Dashboard - KITTI Investment Platform</title>
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -18,31 +18,25 @@
             <div class="flex justify-between h-16">
                 <div class="flex items-center">
                     <div class="flex-shrink-0">
-                        <a href="{{ route('user.dashboard') }}" class="text-xl font-bold text-indigo-600">
+                        <a href="{{ route('user.dashboard') }}">
                             <img src="{{ asset('logo.png') }}" alt="Kitti" class="h-10 w-auto">
                         </a>
                     </div>
                 </div>
                 <div class="flex items-center space-x-4">
-                    @auth
-                    <span class="text-gray-700">Welcome, {{ Auth::user()->name }}</span>
-                    <a href="{{ route('user.dashboard') }}" class="bg-golden-100 text-golden-500 hover:text-golden-700 px-3 py-2 rounded-md text-sm font-medium">
-                        <i class="fas fa-tachometer-alt mr-2"></i>Dashboard
+                    <span class="text-gray-700">Welcome, {{ auth()->user()->name }}</span>
+                    <a href="{{ route('user.profile') }}" class="text-golden-600 hover:text-golden-700 px-3 py-2 rounded-md text-sm font-medium">
+                        <i class="fas fa-user-circle mr-2"></i>Profile
+                    </a>
+                    <a href="{{ route('user.payment-history') }}" class="text-golden-600 hover:text-golden-700 px-3 py-2 rounded-md text-sm font-medium">
+                        <i class="fas fa-history mr-2"></i>Payment History
                     </a>
                     <form method="POST" action="{{ route('auth.logout') }}" class="inline">
                         @csrf
-                        <button type="submit" class="text-red-600 hover:text-red-500 px-3 py-2 rounded-md text-sm font-medium">
+                        <button type="submit" class="text-red-600 hover:text-red-700 px-3 py-2 rounded-md text-sm font-medium">
                             <i class="fas fa-sign-out-alt mr-2"></i>Logout
                         </button>
                     </form>
-                    @else
-                    <a href="{{ route('auth.login') }}" class="text-indigo-600 hover:text-indigo-500 px-3 py-2 rounded-md text-sm font-medium">
-                        <i class="fas fa-sign-in-alt mr-2"></i>Login
-                    </a>
-                    <a href="{{ route('auth.register') }}" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded-md text-sm font-medium">
-                        <i class="fas fa-user-plus mr-2"></i>Register
-                    </a>
-                    @endauth
                 </div>
             </div>
         </div>

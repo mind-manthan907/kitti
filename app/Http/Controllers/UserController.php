@@ -130,7 +130,7 @@ class UserController extends Controller
             ->where('status', 'pending')
             ->count();
 
-        return view('user.payment_history', compact('registration', 'payments', 'totalPaid', 'successfulCount', 'pendingCount'));
+        return view('user.payment-history', compact('registration', 'payments', 'totalPaid', 'successfulCount', 'pendingCount'));
     }
 
     /**
@@ -223,7 +223,7 @@ class UserController extends Controller
             ->orderBy('created_at', 'desc')
             ->paginate(20);
 
-        return view('user.discontinue_requests', compact('registration', 'requests'));
+        return view('user.discontinue-requests', compact('registration', 'requests'));
     }
 
     /**
