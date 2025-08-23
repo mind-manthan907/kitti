@@ -224,9 +224,16 @@
                     <div class="ml-5 w-0 flex-1">
                         <dl>
                             <dt class="text-sm font-medium text-gray-500 truncate">Total Investment</dt>
+                            @if($activeRegistration)
                             <dd class="text-lg font-medium text-gray-900">
                                 ₹{{ number_format($activeRegistration->getPaymentAmount()) }}
                             </dd>
+                            @else
+                            <dd class="text-lg font-medium text-gray-900">
+                                N/A
+                            </dd>
+                            @endif
+
                         </dl>
                     </div>
                 </div>

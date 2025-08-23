@@ -81,7 +81,7 @@ class AdminController extends Controller
 
         $registrations = $query->latest()->paginate(20);
 
-        return view('admin.registrations.index', compact('registrations','plans'));
+        return view('admin.registrations.index', compact('registrations', 'plans'));
     }
 
     /**
@@ -90,7 +90,7 @@ class AdminController extends Controller
     public function showRegistration(KittiRegistration $registration)
     {
         $registration->load(['paymentTransactions', 'discontinueRequests']);
-        
+
         return view('admin.registrations.show', compact('registration'));
     }
 
@@ -100,18 +100,23 @@ class AdminController extends Controller
     public function approveRegistration(Request $request, KittiRegistration $registration)
     {
         $request->validate([
-            'admin_credentials_id' => 'required|string|max:255',
+            'admin_credentials_id' => 'required|email',   // since you use email for login
             'admin_credentials_password' => 'required|string|min:6',
         ]);
 
-        // Generate secure credentials
-        $credentialsId = $request->admin_credentials_id;
-        $tempPassword = $request->admin_credentials_password;
+        $admin = User::where('email', $request->admin_credentials_id)->first();
+
+        if (!$admin || !Hash::check($request->admin_credentials_password, $admin->password)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid admin credentials.',
+            ], 401);
+        }
 
         $registration->update([
             'status' => 'approved',
-            'admin_credentials_id' => $credentialsId,
-            'admin_credentials_password' => Hash::make($tempPassword),
+            'admin_credentials_id' => $admin->id,
+            'admin_credentials_password' => Hash::make($request->admin_credentials_password),
             'approved_by' => auth()->id(),
             'approved_at' => now(),
         ]);
@@ -128,7 +133,7 @@ class AdminController extends Controller
         ]);
 
         // Send credentials email
-        $this->sendCredentialsEmail($registration, $credentialsId, $tempPassword);
+        $this->sendCredentialsEmail($registration, $admin->id, Hash::make($request->admin_credentials_password));
 
         return response()->json([
             'success' => true,
@@ -173,6 +178,105 @@ class AdminController extends Controller
     }
 
     /**
+     * Approve bulk registration
+     */
+    public function approveBulkRegistrations(Request $request)
+    {
+        $request->validate([
+            'ids' => 'required|array|min:1',
+            'admin_credentials_id' => 'required|email',  
+            'admin_credentials_password' => 'required|string|min:6',
+        ]);
+
+        // ✅ Authenticate admin
+        $admin = User::where('email', $request->admin_credentials_id)->first();
+
+        if (!$admin || !Hash::check($request->admin_credentials_password, $admin->password)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid admin credentials.',
+            ], 401);
+        }
+
+        $ids = $request->ids;
+        $registrations = KittiRegistration::whereIn('id', $ids)->get();
+
+        foreach ($registrations as $registration) {
+            $registration->update([
+                'status' => 'approved',
+                'admin_credentials_id' => $admin->id,
+                'admin_credentials_password' => Hash::make($request->admin_credentials_password),
+                'approved_by' => auth()->id(),
+                'approved_at' => now(),
+            ]);
+
+            // Audit log
+            AuditLog::create([
+                'user_id' => auth()->id(),
+                'action' => 'approve_registration_bulk',
+                'model_type' => KittiRegistration::class,
+                'model_id' => $registration->id,
+                'description' => "Registration (ID: {$registration->id}) approved in bulk by " . auth()->user()->name,
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+            ]);
+
+            // Send credentials email
+            $this->sendCredentialsEmail($registration, $admin->id, Hash::make($request->admin_credentials_password));
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => count($ids) . " registrations approved successfully."
+        ]);
+    }
+
+    /**
+     * Reject bulk registrations
+     */
+    public function rejectBulkRegistrations(Request $request)
+    {
+        $request->validate([
+            'ids' => 'required|array|min:1',
+            'rejection_reason' => 'required|string|max:1000',
+        ]);
+
+        $ids = $request->ids;
+        $reason = $request->rejection_reason;
+
+        $registrations = KittiRegistration::whereIn('id', $ids)->get();
+
+        foreach ($registrations as $registration) {
+            $registration->update([
+                'status' => 'rejected',
+                'rejection_reason' => $reason,
+                'approved_by' => auth()->id(),
+                'approved_at' => now(),
+            ]);
+
+            // Audit log
+            AuditLog::create([
+                'user_id' => auth()->id(),
+                'action' => 'reject_registration_bulk',
+                'model_type' => KittiRegistration::class,
+                'model_id' => $registration->id,
+                'description' => "Registration (ID: {$registration->id}) rejected in bulk by " . auth()->user()->name . ". Reason: {$reason}",
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+            ]);
+
+            // Send rejection email
+            $this->sendRejectionEmail($registration, $reason);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => count($ids) . " registrations rejected successfully."
+        ]);
+    }
+
+
+    /**
      * List all payments
      */
     public function payments(Request $request)
@@ -212,7 +316,7 @@ class AdminController extends Controller
     public function showPayment(PaymentTransaction $payment)
     {
         $payment->load('registration');
-        
+
         return view('admin.payments.show', compact('payment'));
     }
 
@@ -272,7 +376,6 @@ class AdminController extends Controller
                 'success' => true,
                 'message' => 'Payment status updated successfully'
             ]);
-
         } catch (\Exception $e) {
             \Log::error('Error updating payment status: ' . $e->getMessage());
             return response()->json([
@@ -317,7 +420,7 @@ class AdminController extends Controller
     public function showDiscontinueRequest(DiscontinueRequest $request)
     {
         $request->load(['registration', 'processedBy']);
-        
+
         return view('admin.discontinue_requests.show', compact('request'));
     }
 
@@ -407,7 +510,7 @@ class AdminController extends Controller
     public function systemConfig()
     {
         $configs = SystemConfig::getAllAsArray();
-        
+
         return view('admin.system_config', compact('configs'));
     }
 
@@ -431,14 +534,14 @@ class AdminController extends Controller
 
         foreach ($request->all() as $key => $value) {
             if (in_array($key, ['_token', '_method'])) continue;
-            
-            $type = match($key) {
+
+            $type = match ($key) {
                 'auto_confirm_hours' => 'integer',
-                'payment_gateway_enabled', 'upi_enabled', 'qr_enabled', 
+                'payment_gateway_enabled', 'upi_enabled', 'qr_enabled',
                 'email_notifications_enabled', 'sms_notifications_enabled' => 'boolean',
                 default => 'string',
             };
-            
+
             SystemConfig::setValue($key, $value, $type);
         }
 
@@ -487,18 +590,18 @@ class AdminController extends Controller
             SUM(CASE WHEN status = "approved" THEN 1 ELSE 0 END) as approved_registrations,
             SUM(CASE WHEN status = "payment_verified" THEN 1 ELSE 0 END) as payment_verified
         ')
-        ->groupBy('month')
-        ->orderBy('month', 'desc')
-        ->take(12)
-        ->get();
+            ->groupBy('month')
+            ->orderBy('month', 'desc')
+            ->take(12)
+            ->get();
 
         $planStats = KittiRegistration::selectRaw('
             plan_amount,
             COUNT(*) as total,
             SUM(CASE WHEN status = "approved" THEN 1 ELSE 0 END) as approved
         ')
-        ->groupBy('plan_amount')
-        ->get();
+            ->groupBy('plan_amount')
+            ->get();
 
         $paymentStats = PaymentTransaction::selectRaw('
             payment_method,
@@ -506,8 +609,8 @@ class AdminController extends Controller
             SUM(CASE WHEN status = "success" THEN 1 ELSE 0 END) as successful_transactions,
             SUM(CASE WHEN status = "success" THEN amount ELSE 0 END) as total_amount
         ')
-        ->groupBy('payment_method')
-        ->get();
+            ->groupBy('payment_method')
+            ->get();
 
         return view('admin.reports', compact('monthlyStats', 'planStats', 'paymentStats'));
     }
@@ -525,9 +628,9 @@ class AdminController extends Controller
 
         if ($request->filled('search')) {
             $search = $request->search;
-            $query->where(function($q) use ($search) {
+            $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%");
+                    ->orWhere('email', 'like', "%{$search}%");
             });
         }
 
@@ -542,7 +645,7 @@ class AdminController extends Controller
     public function showUser(User $user)
     {
         $user->load(['kittiRegistrations', 'discontinueRequests']);
-        
+
         return view('admin.users.show', compact('user'));
     }
 
@@ -599,12 +702,12 @@ class AdminController extends Controller
             $startDate = \Carbon\Carbon::parse($registration->start_date);
             $currentDate = \Carbon\Carbon::now();
             $totalPayments = 10; // 10 months payment for 12 months benefit
-            
+
             for ($i = 0; $i < $totalPayments; $i++) {
                 $paymentDate = $startDate->copy()->addMonths($i);
-                
+
                 // Check if payment is overdue
-                $isOverdue = $paymentDate->isPast() && 
+                $isOverdue = $paymentDate->isPast() &&
                     !$registration->paymentTransactions()
                         ->whereMonth('payment_completed_at', $paymentDate->month)
                         ->whereYear('payment_completed_at', $paymentDate->year)
@@ -625,7 +728,7 @@ class AdminController extends Controller
         }
 
         // Sort by days overdue (most overdue first)
-        usort($monthlyDues, function($a, $b) {
+        usort($monthlyDues, function ($a, $b) {
             return $b['days_overdue'] <=> $a['days_overdue'];
         });
 
@@ -734,13 +837,15 @@ class AdminController extends Controller
 
             for ($i = 0; $i < $totalPayments; $i++) {
                 $paymentDate = $startDate->copy()->addMonths($i);
-                
-                if ($paymentDate->isPast() && 
+
+                if (
+                    $paymentDate->isPast() &&
                     !$registration->paymentTransactions()
                         ->whereMonth('payment_completed_at', $paymentDate->month)
                         ->whereYear('payment_completed_at', $paymentDate->year)
                         ->where('status', 'success')
-                        ->exists()) {
+                        ->exists()
+                ) {
                     $overdueCount++;
                 }
             }
@@ -791,7 +896,7 @@ class AdminController extends Controller
     public function showKycDocument(KycDocument $kycDocument)
     {
         $kycDocument->load(['user']);
-        
+
         return view('admin.kyc.show', compact('kycDocument'));
     }
 
@@ -827,7 +932,6 @@ class AdminController extends Controller
                 'success' => true,
                 'message' => 'KYC document approved successfully!'
             ]);
-
         } catch (\Exception $e) {
             \Log::error('Error approving KYC: ' . $e->getMessage());
             return response()->json([
@@ -869,7 +973,6 @@ class AdminController extends Controller
                 'success' => true,
                 'message' => 'KYC document rejected successfully!'
             ]);
-
         } catch (\Exception $e) {
             \Log::error('Error rejecting KYC: ' . $e->getMessage());
             return response()->json([

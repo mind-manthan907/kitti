@@ -175,7 +175,7 @@ class KittiRegistrationController extends Controller
             ]);
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to create investment plan. Please try again.'
+                'message' => 'Failed to create investment plan. You already have an active investment plan. Please try again later.'
             ], 500);
         }
     }

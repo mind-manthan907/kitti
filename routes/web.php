@@ -126,7 +126,9 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::post('/registrations/{registration}/approve', [AdminController::class, 'approveRegistration'])->name('registrations.approve');
     Route::post('/registrations/{registration}/reject', [AdminController::class, 'rejectRegistration'])->name('registrations.reject');
     Route::post('/registrations/{registration}/update-payment-status', [AdminController::class, 'updatePaymentStatus'])->name('registrations.update-payment-status');
-    
+    Route::post('/registrations/bulk-approve', [AdminController::class, 'approveBulkRegistrations'])->name('registrations.bulk-approve');
+    Route::post('/registrations/bulk-reject', [AdminController::class, 'rejectBulkRegistrations'])->name('registrations.bulk-reject');
+
     // Payments
     Route::get('/payments', [AdminController::class, 'payments'])->name('payments.index');
     Route::get('/payments/{payment}', [AdminController::class, 'showPayment'])->name('payments.show');
