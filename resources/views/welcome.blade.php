@@ -29,36 +29,40 @@
     </nav>
 
     <!-- Hero Section -->
-    <div class="relative overflow-hidden">
-        <div class="max-w-7xl mx-auto">
-            <div class="relative z-10 pb-8 bg-gradient-to-br from-blue-50 to-indigo-100 sm:pb-16 md:pb-20 lg:max-w-2xl lg:w-full lg:pb-28 xl:pb-32">
-                <main class="mt-10 mx-auto max-w-7xl px-4 sm:mt-12 sm:px-6 md:mt-16 lg:mt-20 lg:px-8 xl:mt-28">
-                    <div class="sm:text-center lg:text-left">
-                        <h1 class="text-4xl tracking-tight font-extrabold text-gray-900 sm:text-5xl md:text-6xl">
-                            <span class="block xl:inline">Smart Investment</span>
-                            <span class="block text-golden-500 xl:inline">Made Simple</span>
-                        </h1>
-                        <p class="mt-3 text-base text-gray-500 sm:mt-5 sm:text-lg sm:max-w-xl sm:mx-auto md:mt-5 md:text-xl lg:mx-0">
-                            Join thousands of investors who trust {{ $company_name }} for their financial growth.
-                            Invest for 10 months and get benefits for 12 months with attractive returns.
-                        </p>
-                        <div class="mt-5 sm:mt-8 sm:flex sm:justify-center lg:justify-start">
-                            <div class="rounded-md shadow">
-                                <a href="{{ route('registration.create') }}" class="w-full flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-white bg-golden-500 hover:bg-golden-700 md:py-4 md:text-lg md:px-10">
-                                    Start Investing Today
-                                </a>
-                            </div>
-                            <div class="mt-3 sm:mt-0 sm:ml-3">
-                                <a href="#features" class="w-full flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-golden-900 bg-golden-100 hover:bg-golden-700 md:py-4 md:text-lg md:px-10">
-                                    Learn More
-                                </a>
-                            </div>
-                        </div>
+    <div class="relative overflow-hidden bg-gradient-to-br from-blue-50 to-indigo-100">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="lg:grid lg:grid-cols-12 lg:gap-8 lg:items-center p-4">
+                <!-- Text Content -->
+                <div class="sm:text-center md:max-w-2xl md:mx-auto lg:col-span-6 lg:text-left">
+                    <h1 class="text-4xl font-extrabold text-gray-900 sm:text-5xl md:text-6xl">
+                        <span class="block xl:inline">Smart Investment</span>
+                        <span class="block text-golden-500 xl:inline">Made Simple</span>
+                    </h1>
+                    <p class="mt-3 text-base text-gray-500 sm:mt-5 sm:text-lg md:mt-5 md:text-xl">
+                        Join thousands of investors who trust {{ $company_name }} for their financial growth.
+                        Invest for 10 months and get benefits for 12 months with attractive returns.
+                    </p>
+                    <div class="mt-5 sm:mt-8 sm:flex sm:justify-center lg:justify-start">
+                        <a href="{{ route('registration.create') }}" class="px-8 py-3 rounded-md text-white bg-golden-500 hover:bg-golden-700">
+                            Start Investing Today
+                        </a>
+                        <a href="#features" class="ml-3 px-8 py-3 rounded-md text-golden-900 bg-golden-100 hover:bg-golden-700">
+                            Learn More
+                        </a>
                     </div>
-                </main>
+                </div>
+
+                <!-- Video Content -->
+                <div class="mt-10 relative lg:mt-0 lg:col-span-6">
+                    <video controls autoplay muted loop class="w-full rounded-2xl shadow-xl">
+                        <source src="{{ asset('video.mp4') }}" type="video/mp4">
+                        Your browser does not support the video tag.
+                    </video>
+                </div>
             </div>
         </div>
     </div>
+
 
     <!-- Features Section -->
     <div id="features" class="py-12 bg-white">
