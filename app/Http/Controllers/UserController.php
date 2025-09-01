@@ -10,6 +10,7 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class UserController extends Controller
 {
@@ -24,23 +25,24 @@ class UserController extends Controller
     public function dashboard()
     {
         $user = Auth::user();
-        
+
         // Get active registration using email relationship
         $activeRegistration = $user->kittiRegistrations()
-            ->where('status', 'approved')
+            ->whereIn('status', ['approved'])
+            ->with('investmentPlan')
             ->first();
-        
+
         // Calculate total investment
         $totalInvestment = $user->kittiRegistrations()
             ->where('status', 'approved')
             ->sum('plan_amount');
-        
+
         // Get next payment date (if any)
         $nextPaymentDate = null;
         if ($activeRegistration) {
             $nextPaymentDate = $this->getNextPaymentDate($activeRegistration);
         }
-        
+
         return view('user.dashboard', compact('user', 'activeRegistration', 'totalInvestment', 'nextPaymentDate'));
     }
 
@@ -50,7 +52,7 @@ class UserController extends Controller
     public function profile()
     {
         $user = Auth::user();
-        
+
         $registration = $user->kittiRegistrations()->first();
 
         return view('user.profile', compact('user', 'registration'));
@@ -62,7 +64,7 @@ class UserController extends Controller
     public function updateProfile(Request $request)
     {
         $user = Auth::user();
-        
+
         $request->validate([
             'name' => 'required|string|max:255',
             'phone' => 'nullable|string|max:20',
@@ -90,14 +92,11 @@ class UserController extends Controller
 
             return redirect()->route('user.profile')
                 ->with('success', 'Profile updated successfully!');
-
         } catch (\Exception $e) {
             \Log::error('Error updating profile: ' . $e->getMessage());
 
             return redirect()->route('user.profile')
                 ->with('success', 'Failed to update profile. Please try again.');
-
-
         }
     }
 
@@ -107,7 +106,7 @@ class UserController extends Controller
     public function paymentHistory()
     {
         $user = Auth::user();
-        
+
         $registration = $user->kittiRegistrations()->first();
 
         if (!$registration) {
@@ -139,19 +138,16 @@ class UserController extends Controller
     public function downloadReceipt(PaymentTransaction $payment)
     {
         $user = Auth::user();
-        
-        // Verify user owns this payment
         $registration = $user->kittiRegistrations()->first();
 
         if (!$registration || $payment->kitti_registration_id !== $registration->id) {
             abort(403, 'Unauthorized');
         }
 
-        // Generate PDF receipt
         $pdf = $this->generateReceiptPdf($payment);
-        
         return $pdf->download('receipt_' . $payment->transaction_reference . '.pdf');
     }
+
 
     /**
      * Request discontinue
@@ -159,7 +155,7 @@ class UserController extends Controller
     public function requestDiscontinue(Request $request)
     {
         $user = Auth::user();
-        
+
         $registration = $user->kittiRegistrations()->first();
 
         if (!$registration) {
@@ -211,7 +207,7 @@ class UserController extends Controller
     public function discontinueRequests()
     {
         $user = Auth::user();
-        
+
         $registration = $user->kittiRegistrations()->first();
 
         if (!$registration) {
@@ -232,7 +228,7 @@ class UserController extends Controller
     public function security()
     {
         $user = Auth::user();
-        
+
         return view('user.security', compact('user'));
     }
 
@@ -242,7 +238,7 @@ class UserController extends Controller
     public function toggle2FA(Request $request)
     {
         $user = Auth::user();
-        
+
         $request->validate([
             'two_factor_enabled' => 'required|boolean',
         ]);
@@ -277,7 +273,7 @@ class UserController extends Controller
 
         // Generate OTP
         $otp = rand(100000, 999999);
-        
+
         // Store in session
         session([
             'password_reset_email' => $request->email,
@@ -323,7 +319,7 @@ class UserController extends Controller
         }
 
         $user = \App\Models\User::where('email', $email)->first();
-        
+
         if (!$user) {
             return response()->json([
                 'success' => false,
@@ -364,7 +360,7 @@ class UserController extends Controller
 
         // Calculate next payment date (monthly payments)
         $nextPaymentDate = $lastPayment->payment_completed_at->addMonth();
-        
+
         // If next payment date is after maturity, return null
         if ($nextPaymentDate->isAfter($registration->maturity_date)) {
             return null;
@@ -378,9 +374,6 @@ class UserController extends Controller
      */
     private function generateReceiptPdf(PaymentTransaction $payment)
     {
-        // TODO: Implement PDF generation
-        // This would typically use a library like DomPDF or Snappy
-        
         $data = [
             'payment' => $payment,
             'registration' => $payment->registration,
@@ -388,8 +381,7 @@ class UserController extends Controller
             'company_address' => SystemConfig::getValue('company_address', 'Mumbai, Maharashtra, India'),
         ];
 
-        // For now, return a simple response
-        // In a real implementation, you would generate a PDF
-        return response()->json($data);
+        // Load a Blade view and generate PDF
+        return Pdf::loadView('user.receipt', $data);
     }
 }

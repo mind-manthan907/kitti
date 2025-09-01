@@ -24,6 +24,14 @@ class KittiSeeder extends Seeder
             'email_verified_at' => now(),
         ]);
 
+        User::create([
+            'name' => 'test',
+            'email' => 'test@kitti.com',
+            'password' => Hash::make('test123'),
+            'role' => 'user',
+            'email_verified_at' => now(),
+        ]);
+
         // Initialize system configurations
         SystemConfig::initializeDefaults();
 

@@ -25,13 +25,16 @@ return new class extends Migration
             
             // Processing Details
             $table->decimal('payout_amount', 10, 2)->nullable();
-            $table->string('payout_method')->nullable(); // 'bank' or 'upi'
+            $table->string('payout_method')->nullable();
             $table->string('payout_reference')->nullable();
+            $table->string('bank_account_id')->nullable();
+            $table->enum('payment_status', ['pending', 'processed', 'failed'])->default('pending');
+            $table->string('razorpay_refund_id')->nullable();
+
             $table->timestamp('payout_processed_at')->nullable();
             
             // Admin Actions
             $table->unsignedBigInteger('processed_by')->nullable();
-            $table->timestamp('processed_at')->nullable();
             $table->text('rejection_reason')->nullable();
             
             $table->timestamps();

@@ -80,7 +80,7 @@
                         @forelse($registrations as $registration)
                         <tr>
                             <td class="px-4 py-4">
-                                @if($registration->status == 'pending')
+                                @if($registration->status == 'pending' && $registration->user->hasApprovedKyc())
                                 <input type="checkbox" class="row-checkbox h-4 w-4 text-indigo-600 border-gray-300 rounded" value="{{ $registration->id }}">
                                 @endif
                             </td>
@@ -97,12 +97,14 @@
                                 <span class="px-2 py-1 text-xs rounded bg-yellow-100 text-yellow-800">Pending</span>
                                 @elseif($registration->status == 'approved')
                                 <span class="px-2 py-1 text-xs rounded bg-green-100 text-green-800">Approved</span>
+                                @elseif($registration->status == 'discontinued')
+                                <span class="px-2 py-1 text-xs rounded bg-gray-200 text-gray-800">Discontinued</span>
                                 @else
                                 <span class="px-2 py-1 text-xs rounded bg-red-100 text-red-800">Rejected</span>
                                 @endif
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
-                                @if($registration->latestPayment && $registration->latestPayment->status == 'success')
+                                @if($registration->latestPayment)
                                 <span class="px-2 py-1 text-xs rounded bg-green-100 text-green-800">Paid</span>
                                 @else
                                 <span class="px-2 py-1 text-xs rounded bg-red-100 text-red-800">Unpaid</span>
@@ -113,7 +115,7 @@
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                 <a href="{{ route('admin.registrations.show', $registration) }}" class="text-indigo-600 hover:text-indigo-900 mr-3">View</a>
-                                @if($registration->status == 'pending')
+                                @if($registration->status == 'pending' && $registration->user->hasApprovedKyc())
                                 <button onclick="openApproveModal([{{ $registration->id }}])"
                                     class="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-md text-sm">Approve</button>
                                 <button onclick="openRejectModal([{{ $registration->id }}])"

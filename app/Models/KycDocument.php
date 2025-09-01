@@ -70,7 +70,7 @@ class KycDocument extends Model
      */
     public function getStatusBadgeClassAttribute()
     {
-        return match($this->status) {
+        return match ($this->status) {
             'approved' => 'bg-green-100 text-green-800',
             'rejected' => 'bg-red-100 text-red-800',
             'pending' => 'bg-yellow-100 text-yellow-800',
@@ -83,12 +83,17 @@ class KycDocument extends Model
      */
     public function getDocumentTypeDisplayAttribute()
     {
-        return match($this->document_type) {
+        return match ($this->document_type) {
             'aadhar' => 'Aadhar Card',
             'pan' => 'PAN Card',
             'driving_license' => 'Driving License',
             'passport' => 'Passport',
             default => ucfirst($this->document_type),
         };
+    }
+
+    public function userKyc()
+    {
+        return $this->belongsTo(User::class);
     }
 }

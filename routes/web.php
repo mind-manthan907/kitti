@@ -9,9 +9,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Admin\InvestmentPlanController;
 
 // Homepage
-Route::get('/', function () {
-    return view('welcome');
-});
+Route::get('/', [InvestmentPlanController::class, 'landingPage'])->name('welcome');
 
 // Redirect old login route to new auth.login route
 Route::get('/login', function () {
@@ -24,13 +22,13 @@ Route::prefix('registration')->name('registration.')->group(function () {
     Route::get('/create', function () {
         return redirect()->route('auth.register');
     })->name('create');
-    
+
     // New route for logged-in users to create investment plans
     Route::middleware(['auth'])->group(function () {
         Route::get('/investment-plan', [KittiRegistrationController::class, 'showInvestmentPlanForm'])->name('investment-plan');
         Route::post('/investment-plan', [KittiRegistrationController::class, 'storeInvestmentPlan'])->name('investment-plan.store');
     });
-    
+
     Route::post('/step1', [KittiRegistrationController::class, 'storeStep1'])->name('step1');
     Route::post('/verify-otp', [KittiRegistrationController::class, 'verifyMobileOtp'])->name('verify-otp');
     Route::post('/step2', [KittiRegistrationController::class, 'storeStep2'])->name('step2');
@@ -41,11 +39,11 @@ Route::prefix('registration')->name('registration.')->group(function () {
     Route::post('/step7', [KittiRegistrationController::class, 'storeStep7'])->name('step7');
     Route::post('/skip-investment', [KittiRegistrationController::class, 'skipInvestment'])->name('skip-investment');
     Route::post('/create-account', [KittiRegistrationController::class, 'createAccount'])->name('create-account');
-    Route::get('/preview', [KittiRegistrationController::class, 'preview'])->name('preview');
-    Route::get('/{registration}/payment', [KittiRegistrationController::class, 'payment'])->name('payment');
+    Route::get('{registration}/preview', [KittiRegistrationController::class, 'preview'])->name('preview');
+    Route::post('/{registration}/payment', [KittiRegistrationController::class, 'payment'])->name('payment');
     Route::post('/{registration}/process-payment', [KittiRegistrationController::class, 'processPayment'])->name('process-payment');
-    Route::get('/payment/success', [KittiRegistrationController::class, 'paymentSuccess'])->name('payment.success');
-    Route::get('/payment/failure', [KittiRegistrationController::class, 'paymentFailure'])->name('payment.failure');
+    Route::post('/payment/success', [KittiRegistrationController::class, 'paymentSuccess'])->name('payment.success');
+    Route::post('/payment/failure', [KittiRegistrationController::class, 'paymentFailure'])->name('payment.failure');
 });
 
 // Payment routes
@@ -75,10 +73,12 @@ Route::middleware(['auth'])->prefix('user')->name('user.')->group(function () {
     Route::get('/profile', [UserController::class, 'profile'])->name('profile');
     Route::put('/profile', [UserController::class, 'updateProfile'])->name('profile.update');
     Route::get('/payment-history', [UserController::class, 'paymentHistory'])->name('payment-history');
-    Route::get('/download-receipt/{payment}', [UserController::class, 'downloadReceipt'])->name('download-receipt');
-    Route::post('/request-discontinue', [UserController::class, 'requestDiscontinue'])->name('request-discontinue');
+    Route::get('/download-receipt/{payment}', [UserController::class, 'downloadReceipt'])->name('receipt');
     Route::get('/discontinue-requests', [UserController::class, 'discontinueRequests'])->name('discontinue-requests');
+    Route::post('/request-discontinue', [UserController::class, 'requestDiscontinue'])->name('request-discontinue');
+
     Route::get('/security', [UserController::class, 'security'])->name('security');
+    Route::post('/toggle2FA', [UserController::class, 'toggle2FA'])->name('verify-two-factor');
 
     // User Profile Management
     Route::prefix('profile')->name('profile.')->group(function () {
@@ -88,7 +88,7 @@ Route::middleware(['auth'])->prefix('user')->name('user.')->group(function () {
         Route::get('/kyc/{kycDocument}', [App\Http\Controllers\Profile\KycController::class, 'show'])->name('kyc.show');
         Route::get('/kyc/{kycDocument}/download', [App\Http\Controllers\Profile\KycController::class, 'download'])->name('kyc.download');
         Route::delete('/kyc/{kycDocument}', [App\Http\Controllers\Profile\KycController::class, 'destroy'])->name('kyc.destroy');
-        
+
         Route::get('/bank-accounts', [App\Http\Controllers\Profile\BankAccountController::class, 'index'])->name('bank-accounts.index');
         Route::get('/bank-accounts/create', [App\Http\Controllers\Profile\BankAccountController::class, 'create'])->name('bank-accounts.create');
         Route::post('/bank-accounts', [App\Http\Controllers\Profile\BankAccountController::class, 'store'])->name('bank-accounts.store');
@@ -96,7 +96,7 @@ Route::middleware(['auth'])->prefix('user')->name('user.')->group(function () {
         Route::put('/bank-accounts/{bankAccount}', [App\Http\Controllers\Profile\BankAccountController::class, 'update'])->name('bank-accounts.update');
         Route::post('/bank-accounts/{bankAccount}/toggle-status', [App\Http\Controllers\Profile\BankAccountController::class, 'toggleStatus'])->name('bank-accounts.toggle-status');
         Route::post('/bank-accounts/{bankAccount}/set-primary', [App\Http\Controllers\Profile\BankAccountController::class, 'setPrimary'])->name('bank-accounts.set-primary');
-        
+
         Route::get('/upi-accounts', [App\Http\Controllers\Profile\UpiAccountController::class, 'index'])->name('upi-accounts.index');
         Route::get('/upi-accounts/create', [App\Http\Controllers\Profile\UpiAccountController::class, 'create'])->name('upi-accounts.create');
         Route::post('/upi-accounts', [App\Http\Controllers\Profile\UpiAccountController::class, 'store'])->name('upi-accounts.store');
@@ -110,16 +110,16 @@ Route::middleware(['auth'])->prefix('user')->name('user.')->group(function () {
 // Admin routes (require authentication and admin role)
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
-    
+
     // Users Management
     Route::get('/users', [AdminController::class, 'users'])->name('users.index');
     Route::post('/users/{user}/toggle-status', [AdminController::class, 'toggleUserStatus'])->name('users.toggle-status');
     Route::get('/users/{user}', [AdminController::class, 'showUser'])->name('users.show');
-    
+
     // Investment Plans Management
     Route::resource('investment-plans', InvestmentPlanController::class);
     Route::post('/investment-plans/{investmentPlan}/toggle-status', [InvestmentPlanController::class, 'toggleStatus'])->name('investment-plans.toggle-status');
-    
+
     // Registrations
     Route::get('/registrations', [AdminController::class, 'registrations'])->name('registrations.index');
     Route::get('/registrations/{registration}', [AdminController::class, 'showRegistration'])->name('registrations.show');
@@ -133,27 +133,27 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::get('/payments', [AdminController::class, 'payments'])->name('payments.index');
     Route::get('/payments/{payment}', [AdminController::class, 'showPayment'])->name('payments.show');
     Route::post('/payments/{payment}/mark-success', [AdminController::class, 'markPaymentSuccess'])->name('payments.mark-success');
-    
+
     // Discontinue requests
     Route::get('/discontinue-requests', [AdminController::class, 'discontinueRequests'])->name('discontinue-requests.index');
     Route::get('/discontinue-requests/{request}', [AdminController::class, 'showDiscontinueRequest'])->name('discontinue-requests.show');
-    Route::post('/discontinue-requests/{request}/approve', [AdminController::class, 'approveDiscontinueRequest'])->name('discontinue-requests.approve');
+    Route::post('/discontinue-requests/{discontinueRequest}/approve', [AdminController::class, 'approveDiscontinueRequest'])->name('discontinue-requests.approve');
     Route::post('/discontinue-requests/{request}/reject', [AdminController::class, 'rejectDiscontinueRequest'])->name('discontinue-requests.reject');
-    
+
     // Monthly Dues
     Route::get('/monthly-dues', [AdminController::class, 'monthlyDues'])->name('monthly-dues');
     Route::post('/monthly-dues/send-reminder', [AdminController::class, 'sendReminder'])->name('monthly-dues.send-reminder');
-    
+
     // System configuration
     Route::get('/system-config', [AdminController::class, 'systemConfig'])->name('system-config');
     Route::put('/system-config', [AdminController::class, 'updateSystemConfig'])->name('system-config.update');
-    
+
     // Audit logs
     Route::get('/audit-logs', [AdminController::class, 'auditLogs'])->name('audit-logs');
-    
+
     // Reports
     Route::get('/reports', [AdminController::class, 'reports'])->name('reports');
-    
+
     // KYC Management
     Route::get('/kyc', [AdminController::class, 'kycDocuments'])->name('kyc.index');
     Route::get('/kyc/{kycDocument}', [AdminController::class, 'showKycDocument'])->name('kyc.show');

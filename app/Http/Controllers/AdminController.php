@@ -14,6 +14,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
+use Razorpay\Api\Api;
 
 class AdminController extends Controller
 {
@@ -184,7 +185,7 @@ class AdminController extends Controller
     {
         $request->validate([
             'ids' => 'required|array|min:1',
-            'admin_credentials_id' => 'required|email',  
+            'admin_credentials_id' => 'required|email',
             'admin_credentials_password' => 'required|string|min:6',
         ]);
 
@@ -332,7 +333,7 @@ class AdminController extends Controller
 
         // Update registration status
         $registration = $payment->registration;
-        $registration->update(['status' => 'payment_verified']);
+        $registration->update(['status' => 'payment_verified', 'payment_status' => 'success']);
 
         // Set auto-confirm time
         $autoConfirmHours = SystemConfig::getValue('auto_confirm_hours', 24);
@@ -419,9 +420,16 @@ class AdminController extends Controller
      */
     public function showDiscontinueRequest(DiscontinueRequest $request)
     {
-        $request->load(['registration', 'processedBy']);
-
-        return view('admin.discontinue_requests.show', compact('request'));
+        $request->load(['registration', 'investmentPlan', 'processedBy','user']);
+        $totalPaid = $request->registration->paymentTransactions()
+            ->where('status', 'success')
+            ->sum('amount');
+        $totalPaidCount = $request->registration
+            ->paymentTransactions()
+            ->where('status', 'success')
+            ->count();
+ 
+        return view('admin.discontinue-requests.show', compact('request','totalPaid','totalPaidCount'));
     }
 
     /**
@@ -429,42 +437,90 @@ class AdminController extends Controller
      */
     public function approveDiscontinueRequest(Request $request, DiscontinueRequest $discontinueRequest)
     {
-        $request->validate([
-            'payout_amount' => 'required|numeric|min:0',
-            'payout_method' => 'required|in:bank,upi',
-            'admin_notes' => 'nullable|string|max:1000',
-        ]);
+        $discontinueRequest->load(['registration', 'investmentPlan', 'processedBy']);
 
-        $discontinueRequest->update([
-            'status' => 'approved',
-            'payout_amount' => $request->payout_amount,
-            'payout_method' => $request->payout_method,
-            'admin_notes' => $request->admin_notes,
-            'processed_by' => auth()->id(),
-            'processed_at' => now(),
-        ]);
+        $registrationRequest = $discontinueRequest->registration;
 
-        // Update registration status
-        $registration = $discontinueRequest->registration;
-        $registration->update(['status' => 'discontinued']);
+        $totalPaid = $registrationRequest->paymentTransactions()
+            ->where('status', 'success')
+            ->sum('amount');
 
-        // Log audit
+        $deduction = $totalPaid * 0.02;
+        $refundAmount = $totalPaid - $deduction;
+
+        $bankAccount = $registrationRequest->user->bankAccount;
+        if (!$bankAccount) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No bank account linked for refund.'
+            ], 422);
+        }
+
+        // Get latest successful Razorpay payment
+        $paymentTransaction = $registrationRequest->paymentTransactions()
+            ->where('status', 'success')
+            ->latest()
+            ->first();
+
+
+        if (!$paymentTransaction || !$paymentTransaction->transaction_reference) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No valid Razorpay payment found for refund.'
+            ], 422);
+        }
+
+        // ✅ Step 1: Call Razorpay Refund API
+        $api = new Api(env('RAZORPAY_KEY'), env('RAZORPAY_SECRET'));
+        try {
+            $refund = $api->payment
+                ->fetch($paymentTransaction->transaction_reference)
+                ->refund([
+                    'amount' => $refundAmount * 100, // in paise
+                    'speed'  => 'normal'
+                ]);
+
+            // ✅ Update discontinue request (only status & notes, no refund details here)
+            $discontinueRequest->update([
+                'status'            => 'approved',
+                'payout_amount'     => $refundAmount,
+                'admin_notes'       => "Refund initiated via Razorpay",
+                'processed_by'      => auth()->id(),
+                'processed_at'      => now(),
+                'bank_account_id'   => $bankAccount->id,
+                'payout_amount'     => $refundAmount,
+                'payout_method'     => 'gateway',
+                'gateway_name'     => 'razorpay',
+                'payment_status'    => $refund['status'], // "processed" / "pending" / "failed"
+                'razorpay_refund_id' => $refund['id'],
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Refund failed: ' . $e->getMessage()
+            ], 500);
+        }
+
+        $registrationRequest->update(['status' => 'discontinued']);
+
         AuditLog::create([
             'user_id' => auth()->id(),
             'action' => 'approve_discontinue',
             'model_type' => DiscontinueRequest::class,
             'model_id' => $discontinueRequest->id,
-            'description' => "Discontinue request approved by " . auth()->user()->name . ". Payout: ₹" . $request->payout_amount,
+            'description' => "Refund done via Razorpay. Paid: ₹{$totalPaid}, Deduction: ₹{$deduction}, Refunded: ₹{$refundAmount}",
             'ip_address' => $request->ip(),
             'user_agent' => $request->userAgent(),
         ]);
 
-        // Send approval email
-        $this->sendDiscontinueApprovalEmail($discontinueRequest);
+        //$this->sendDiscontinueApprovalEmail($discontinueRequest, $refundAmount);
 
         return response()->json([
             'success' => true,
-            'message' => 'Discontinue request approved successfully'
+            'message' => 'Refund initiated via Razorpay successfully',
+            'total_paid' => $totalPaid,
+            'deduction' => $deduction,
+            'refund_amount' => $refundAmount,
         ]);
     }
 

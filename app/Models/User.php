@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
+use App\Models\InvestmentPlan;
 
 class User extends Authenticatable
 {
@@ -149,6 +151,11 @@ class User extends Authenticatable
         return $this->kycDocuments()->where('status', 'approved')->exists();
     }
 
+    public function hasPendingKycDocument()
+    {
+        return $this->kycDocuments()->where('status', 'pending')->exists();
+    }
+
     /**
      * Check if user has any KYC document
      */
@@ -171,5 +178,32 @@ class User extends Authenticatable
     public function hasUpiAccount()
     {
         return $this->upiAccounts()->active()->exists();
+    }
+
+    public function investmentPlans(): HasManyThrough
+    {
+        return $this->hasManyThrough(
+            InvestmentPlan::class,     // Final model
+            KittiRegistration::class,  // Intermediate model
+            'email',                   // Foreign key on kitti_registrations (points to users.email)
+            'id',                      // Foreign key on investment_plans (its PK)
+            'email',                   // Local key on users table
+            'plan_id'                  // Local key on kitti_registrations table
+        );
+    }
+
+    public function bankAccount()
+    {
+        return $this->hasOne(BankAccount::class);
+    }
+
+    public function registrations()
+    {
+        return $this->hasMany(KittiRegistration::class);
+    }
+
+    public function hasApprovedKyc(): bool
+    {
+        return $this->kycDocuments()->where('status', 'approved')->exists();
     }
 }

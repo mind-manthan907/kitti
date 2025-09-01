@@ -4,8 +4,8 @@
 <div class="container mx-auto px-4 py-8">
     <div class="flex justify-between items-center mb-6">
         <h1 class="text-3xl font-bold text-gray-900">Investment Plans Management</h1>
-        <a href="{{ route('admin.investment-plans.create') }}" 
-           class="bg-golden-500 hover:bg-golden-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+        <a href="{{ route('admin.investment-plans.create') }}"
+            class="bg-golden-500 hover:bg-golden-700 text-white px-4 py-2 rounded-md text-sm font-medium">
             <i class="fas fa-plus mr-2"></i>Create New Plan
         </a>
     </div>
@@ -23,7 +23,7 @@
                 </div>
             </div>
         </div>
-        
+
         <div class="bg-white rounded-lg shadow p-6">
             <div class="flex items-center">
                 <div class="p-3 rounded-full bg-green-100 text-green-600">
@@ -35,7 +35,7 @@
                 </div>
             </div>
         </div>
-        
+
         <div class="bg-white rounded-lg shadow p-6">
             <div class="flex items-center">
                 <div class="p-3 rounded-full bg-yellow-100 text-yellow-600">
@@ -47,7 +47,7 @@
                 </div>
             </div>
         </div>
-        
+
         <div class="bg-white rounded-lg shadow p-6">
             <div class="flex items-center">
                 <div class="p-3 rounded-full bg-purple-100 text-purple-600">
@@ -66,7 +66,7 @@
         <div class="px-6 py-4 border-b border-gray-200">
             <h2 class="text-lg font-medium text-gray-900">Investment Plans</h2>
         </div>
-        
+
         <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
@@ -89,8 +89,11 @@
                             </div>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="text-sm font-medium text-gray-900">{{ $plan->formatted_amount }}</div>
-                            <div class="text-xs text-gray-500">Total target amount</div>
+                            <div class="font-medium text-xs text-gray-500">Principal amount:
+                                {{ $plan->formatted_amount }}
+                            </div>
+                            <div class="font-medium text-xs text-gray-700">Total target amount:
+                               {{ $plan->formatted_target_amount }}</div>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
                             <div class="text-sm font-medium text-blue-600">{{ $plan->formatted_monthly_due }}</div>
@@ -107,16 +110,16 @@
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                             <div class="flex space-x-2">
-                                <a href="{{ route('admin.investment-plans.edit', $plan) }}" 
-                                   class="text-indigo-600 hover:text-indigo-900">
+                                <a href="{{ route('admin.investment-plans.edit', $plan) }}"
+                                    class="text-indigo-600 hover:text-indigo-900">
                                     <i class="fas fa-edit"></i>
                                 </a>
-                                <button onclick="togglePlanStatus({{ $plan->id }})" 
-                                        class="text-yellow-600 hover:text-yellow-900">
+                                <button onclick="togglePlanStatus({{ $plan->id }})"
+                                    class="text-yellow-600 hover:text-yellow-900">
                                     <i class="fas fa-{{ $plan->is_active ? 'pause' : 'play' }}"></i>
                                 </button>
-                                <button onclick="deletePlan({{ $plan->id }})" 
-                                        class="text-red-600 hover:text-red-900">
+                                <button onclick="deletePlan({{ $plan->id }})"
+                                    class="text-red-600 hover:text-red-900">
                                     <i class="fas fa-trash"></i>
                                 </button>
                             </div>
@@ -132,7 +135,7 @@
                 </tbody>
             </table>
         </div>
-        
+
         <!-- Pagination -->
         @if($plans->hasPages())
         <div class="px-6 py-4 border-t border-gray-200">
@@ -161,63 +164,63 @@
 </div>
 
 <script>
-let planToDelete = null;
+    let planToDelete = null;
 
-function togglePlanStatus(planId) {
-    fetch(`/admin/investment-plans/${planId}/toggle-status`, {
-        method: 'POST',
-        headers: {
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-            'Accept': 'application/json',
-        },
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            location.reload();
-        } else {
-            alert(data.message);
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('An error occurred while updating plan status.');
-    });
-}
-
-function deletePlan(planId) {
-    planToDelete = planId;
-    document.getElementById('deleteModal').classList.remove('hidden');
-}
-
-function closeDeleteModal() {
-    document.getElementById('deleteModal').classList.add('hidden');
-    planToDelete = null;
-}
-
-document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
-    if (planToDelete) {
-        fetch(`/admin/investment-plans/${planToDelete}`, {
-            method: 'DELETE',
-            headers: {
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                'Accept': 'application/json',
-            },
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                location.reload();
-            } else {
-                alert(data.message);
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('An error occurred while deleting the plan.');
-        });
+    function togglePlanStatus(planId) {
+        fetch(`/admin/investment-plans/${planId}/toggle-status`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                    'Accept': 'application/json',
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert(data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while updating plan status.');
+            });
     }
-    closeDeleteModal();
-});
+
+    function deletePlan(planId) {
+        planToDelete = planId;
+        document.getElementById('deleteModal').classList.remove('hidden');
+    }
+
+    function closeDeleteModal() {
+        document.getElementById('deleteModal').classList.add('hidden');
+        planToDelete = null;
+    }
+
+    document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
+        if (planToDelete) {
+            fetch(`/admin/investment-plans/${planToDelete}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                        'Accept': 'application/json',
+                    },
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        location.reload();
+                    } else {
+                        alert(data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred while deleting the plan.');
+                });
+        }
+        closeDeleteModal();
+    });
 </script>
 @endsection

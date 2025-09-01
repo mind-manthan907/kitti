@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KITTI Investment Platform</title>
+    <title>{{ $company_name }}</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="{{ asset('css/golden.css') }}">
@@ -17,7 +17,7 @@
             <div class="flex justify-between h-16">
                 <div class="flex items-center">
                     <div class="flex-shrink-0">
-                        <img src="{{ asset('logo.png') }}" alt="Kitti" class="h-10 w-auto">
+                        <img src="{{ asset('logo.png') }}" alt="{{ $company_name }}" class="h-10 w-auto">
                     </div>
                 </div>
                 <div class="flex items-center space-x-4">
@@ -39,7 +39,7 @@
                             <span class="block text-golden-500 xl:inline">Made Simple</span>
                         </h1>
                         <p class="mt-3 text-base text-gray-500 sm:mt-5 sm:text-lg sm:max-w-xl sm:mx-auto md:mt-5 md:text-xl lg:mx-0">
-                            Join thousands of investors who trust KITTI for their financial growth.
+                            Join thousands of investors who trust {{ $company_name }} for their financial growth.
                             Invest for 10 months and get benefits for 12 months with attractive returns.
                         </p>
                         <div class="mt-5 sm:mt-8 sm:flex sm:justify-center lg:justify-start">
@@ -66,7 +66,7 @@
             <div class="lg:text-center">
                 <h2 class="text-base text-golden-500 font-semibold tracking-wide uppercase">Features</h2>
                 <p class="mt-2 text-3xl leading-8 font-extrabold tracking-tight text-gray-900 sm:text-4xl">
-                    Why Choose KITTI?
+                    Why Choose {{ $company_name }}?
                 </p>
                 <p class="mt-4 max-w-2xl text-xl text-gray-500 lg:mx-auto">
                     Our platform offers the best investment opportunities with secure, transparent, and profitable returns.
@@ -132,51 +132,70 @@
                 </p>
             </div>
 
-            <div class="mt-10 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
-                <div class="bg-white rounded-lg shadow-lg p-6">
+            <!-- Plan Grid -->
+            <div class="mt-10 grid grid-cols-1 gap-8 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-5">
+                @foreach($plans as $plan)
+                <div class="bg-white rounded-lg shadow-lg p-6 cursor-pointer plan-card"
+                    data-plan-id="{{ $plan->id }}"
+                    data-name="{{ $plan->name }}"
+                    data-amount="{{ $plan->formatted_amount }}"
+                    data-duration="{{ $plan->formatted_duration }}"
+                    data-monthly-due="{{ $plan->formatted_monthly_due }}"
+                    data-description="{{ $plan->description }}">
                     <div class="text-center">
-                        <h3 class="text-2xl font-bold text-gray-900">₹1,000</h3>
-                        <p class="text-gray-500">Basic Plan</p>
+                        <h3 class="text-2xl font-bold text-gray-900">₹ {{ $plan->amount }}</h3>
+                        <p class="text-gray-500">{{ $plan->name }}</p>
                         <div class="mt-4">
-                            <span class="text-sm text-gray-500">Pay for 10 months</span><br>
-                            <span class="text-sm text-gray-500">Get 12 months benefit</span>
+                            <span class="text-sm text-gray-500">Pay for {{ $plan->emi_months }} months</span><br>
+                            <span class="text-sm text-gray-500">Get {{ $plan->formatted_duration }} benefit</span>
                         </div>
                     </div>
                 </div>
+                @endforeach
+            </div>
 
-                <div class="bg-white rounded-lg shadow-lg p-6">
-                    <div class="text-center">
-                        <h3 class="text-2xl font-bold text-gray-900">₹10,000</h3>
-                        <p class="text-gray-500">Standard Plan</p>
-                        <div class="mt-4">
-                            <span class="text-sm text-gray-500">Pay for 10 months</span><br>
-                            <span class="text-sm text-gray-500">Get 12 months benefit</span>
+            <!-- Modal -->
+            <div id="approveModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50 flex items-center justify-center">
+                <div class="bg-white rounded-md p-6 w-96 relative">
+                    <!-- Close Button -->
+                    <button type="button" onclick="closeApproveModal()"
+                        class="absolute top-2 right-2 text-gray-500 hover:text-gray-700 text-xl font-bold">&times;</button>
+
+                    <h3 class="text-lg font-medium text-gray-900 mb-4" id="modalPlanName">Plan Detail(s)</h3>
+
+                    <div class="space-y-3">
+                        <!-- Plan Amount -->
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700">Plan Amount</label>
+                            <div class="text-2xl font-bold text-indigo-600" id="modalPlanAmount">₹ 0</div>
+                        </div>
+
+                        <!-- Plan Duration -->
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700">Plan Duration</label>
+                            <div class="text-sm text-gray-600" id="modalPlanDuration">0 months</div>
+                        </div>
+
+                        <!-- Total EMI Months -->
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700">Total EMI Months</label>
+                            <div class="text-sm text-blue-600 font-medium" id="modalPlanMonthly">0</div>
+                        </div>
+
+                        <!-- Plan Description -->
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700">Plan Description</label>
+                            <div class="text-xs text-gray-500 mt-1" id="modalPlanDescription">No description</div>
                         </div>
                     </div>
-                </div>
 
-                <div class="bg-white rounded-lg shadow-lg p-6">
-                    <div class="text-center">
-                        <h3 class="text-2xl font-bold text-gray-900">₹50,000</h3>
-                        <p class="text-gray-500">Premium Plan</p>
-                        <div class="mt-4">
-                            <span class="text-sm text-gray-500">Pay for 10 months</span><br>
-                            <span class="text-sm text-gray-500">Get 12 months benefit</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="bg-white rounded-lg shadow-lg p-6">
-                    <div class="text-center">
-                        <h3 class="text-2xl font-bold text-gray-900">₹1,00,000</h3>
-                        <p class="text-gray-500">Ultimate Plan</p>
-                        <div class="mt-4">
-                            <span class="text-sm text-gray-500">Pay for 10 months</span><br>
-                            <span class="text-sm text-gray-500">Get 12 months benefit</span>
-                        </div>
+                    <div class="flex items-center justify-center space-x-3 mt-8">
+                        <a href="{{ route('auth.login') }}" class="bg-golden-500 hover:bg-golden-700 text-white px-4 py-2 rounded-md text-sm font-medium">Login</a>
+                        <a href="{{ route('registration.create') }}" class="bg-golden-500 hover:bg-golden-700 text-white px-4 py-2 rounded-md text-sm font-medium">Register Now</a>
                     </div>
                 </div>
             </div>
+
         </div>
     </div>
 
@@ -185,10 +204,10 @@
         <div class="max-w-2xl mx-auto text-center py-16 px-4 sm:py-20 sm:px-6 lg:px-8">
             <h2 class="text-3xl font-extrabold text-white sm:text-4xl">
                 <span class="block">Ready to start investing?</span>
-                <span class="block">Join KITTI today.</span>
+                <span class="block">Join {{ $company_name }} today.</span>
             </h2>
             <p class="mt-4 text-lg leading-6 text-golden-900">
-                Start your investment journey with KITTI and secure your financial future.
+                Start your investment journey with {{ $company_name }} and secure your financial future.
             </p>
             <a href="{{ route('registration.create') }}" class="mt-8 w-full inline-flex items-center justify-center px-5 py-3 border border-transparent text-base font-medium rounded-md text-golden-600 bg-white hover:bg-indigo-50 sm:w-auto">
                 Get Started
@@ -201,7 +220,7 @@
         <div class="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
             <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
                 <div>
-                    <h3 class="text-white text-lg font-semibold">KITTI</h3>
+                    <h3 class="text-white text-lg font-semibold">{{ $company_name }}</h3>
                     <p class="text-gray-300 mt-2">Smart investment platform for secure financial growth.</p>
                 </div>
                 <div>
@@ -236,10 +255,34 @@
                 </div>
             </div>
             <div class="mt-8 border-t border-gray-700 pt-8">
-                <p class="text-gray-300 text-center">&copy; 2024 KITTI Investment Platform. All rights reserved.</p>
+                <p class="text-gray-300 text-center">&copy; 2024 {{ $company_name }} . All rights reserved.</p>
             </div>
         </div>
     </footer>
+    <script>
+        const modal = document.getElementById('approveModal');
+        const modalName = document.getElementById('modalPlanName');
+        const modalAmount = document.getElementById('modalPlanAmount');
+        const modalDuration = document.getElementById('modalPlanDuration');
+        const modalMonthly = document.getElementById('modalPlanMonthly');
+        const modalDescription = document.getElementById('modalPlanDescription');
+
+        document.querySelectorAll('.plan-card').forEach(card => {
+            card.addEventListener('click', () => {
+                modalName.textContent = card.dataset.name;
+                modalAmount.textContent = card.dataset.amount;
+                modalDuration.textContent = card.dataset.duration;
+                modalMonthly.textContent = "Monthly: " + card.dataset.monthlyDue;
+                modalDescription.textContent = card.dataset.description;
+
+                modal.classList.remove('hidden');
+            });
+        });
+
+        function closeApproveModal() {
+            modal.classList.add('hidden');
+        }
+    </script>
 </body>
 
 </html>

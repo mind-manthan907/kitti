@@ -100,13 +100,13 @@
                             </tr>
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200">
-                            @forelse($discontinueRequests ?? [] as $request)
+                            @forelse($requests ?? [] as $request)
                             <tr>
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <div class="flex items-center">
                                         <div class="flex-shrink-0 h-10 w-10">
                                             <div class="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center">
-                                                <span class="text-indigo-600 font-medium">{{ substr($request->user->name ?? 'N/A', 0, 1) }}</span>
+                                                <span class="text-indigo-600 font-medium">{{ ucfirst($request->user->name ?? 'N/A') }}</span>
                                             </div>
                                         </div>
                                         <div class="ml-4">
@@ -177,4 +177,3 @@
         }
     </script>
 @endsection
-

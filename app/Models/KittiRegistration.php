@@ -91,7 +91,7 @@ class KittiRegistration extends Model
      */
     public function discontinueRequests(): HasMany
     {
-        return $this->hasMany(DiscontinueRequest::class);
+        return $this->hasMany(DiscontinueRequest::class, 'kitti_registration_id');
     }
 
     /**
@@ -127,9 +127,9 @@ class KittiRegistration extends Model
      */
     public function isEligibleForAutoConfirm(): bool
     {
-        return $this->status === 'payment_verified' && 
-               $this->auto_confirm_at && 
-               $this->auto_confirm_at->isPast();
+        return $this->status === 'payment_verified' &&
+            $this->auto_confirm_at &&
+            $this->auto_confirm_at->isPast();
     }
 
     /**
@@ -140,15 +140,15 @@ class KittiRegistration extends Model
         if (!$this->bank_account_number) {
             return '';
         }
-        
+
         $length = strlen($this->bank_account_number);
         if ($length <= 4) {
             return str_repeat('*', $length);
         }
-        
-        return substr($this->bank_account_number, 0, 2) . 
-               str_repeat('*', $length - 4) . 
-               substr($this->bank_account_number, -2);
+
+        return substr($this->bank_account_number, 0, 2) .
+            str_repeat('*', $length - 4) .
+            substr($this->bank_account_number, -2);
     }
 
     /**
@@ -159,22 +159,22 @@ class KittiRegistration extends Model
         if (!$this->upi_id) {
             return '';
         }
-        
+
         $parts = explode('@', $this->upi_id);
         if (count($parts) !== 2) {
             return str_repeat('*', strlen($this->upi_id));
         }
-        
+
         $username = $parts[0];
         $provider = $parts[1];
-        
+
         if (strlen($username) <= 2) {
             return str_repeat('*', strlen($username)) . '@' . $provider;
         }
-        
-        return substr($username, 0, 1) . 
-               str_repeat('*', strlen($username) - 2) . 
-               substr($username, -1) . '@' . $provider;
+
+        return substr($username, 0, 1) .
+            str_repeat('*', strlen($username) - 2) .
+            substr($username, -1) . '@' . $provider;
     }
 
     /**
@@ -182,7 +182,7 @@ class KittiRegistration extends Model
      */
     public function getPaymentStatusBadgeClassAttribute()
     {
-        return match($this->payment_status) {
+        return match ($this->payment_status) {
             'success' => 'bg-green-100 text-green-800',
             'failed' => 'bg-red-100 text-red-800',
             'pending' => 'bg-yellow-100 text-yellow-800',

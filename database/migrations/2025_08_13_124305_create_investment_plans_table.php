@@ -16,6 +16,7 @@ return new class extends Migration
             $table->string('name')->unique();
             $table->decimal('amount', 12, 2);
             $table->integer('duration_months');
+            $table->integer('emi_months');
             $table->decimal('interest_rate', 5, 2)->default(0); // Annual interest rate
             $table->text('description')->nullable();
             $table->boolean('is_active')->default(true);

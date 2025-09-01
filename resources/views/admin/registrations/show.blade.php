@@ -10,7 +10,7 @@
                     <p class="mt-2 text-gray-600">Registration #{{ $registration->id }} - {{ $registration->full_name }}</p>
                 </div>
                 <div class="flex space-x-3">
-                    @if($registration->status === 'pending')
+                    @if($registration->status === 'pending' && $registration->user->hasApprovedKyc())
                     <button id="approveBtn" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium">
                         <i class="fas fa-check mr-2"></i>Approve
                     </button>

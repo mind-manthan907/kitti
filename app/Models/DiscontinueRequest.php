@@ -19,6 +19,10 @@ class DiscontinueRequest extends Model
         'processed_by',
         'processed_at',
         'rejection_reason',
+
+        'bank_account_id',
+        'payment_status',
+        'razorpay_refund_id',
     ];
 
     protected $casts = [
@@ -80,7 +84,7 @@ class DiscontinueRequest extends Model
      */
     public function getPayoutMethodDisplay(): string
     {
-        return match($this->payout_method) {
+        return match ($this->payout_method) {
             'bank' => 'Bank Transfer',
             'upi' => 'UPI Transfer',
             default => ucfirst($this->payout_method ?? ''),
@@ -109,5 +113,29 @@ class DiscontinueRequest extends Model
     public function scopeRejected($query)
     {
         return $query->where('status', 'rejected');
+    }
+
+    public function investmentPlan()
+    {
+        return $this->hasOneThrough(
+            InvestmentPlan::class,      // Final model
+            KittiRegistration::class,   // Intermediate model
+            'id',                       // Foreign key on kitti_registrations (local)
+            'id',                       // Foreign key on investment_plans (local)
+            'kitti_registration_id',    // Local key on discontinue_requests
+            'plan_id'                   // Local key on kitti_registrations
+        );
+    }
+
+    public function user()
+    {
+        return $this->hasOneThrough(
+            User::class,
+            KittiRegistration::class,
+            'id',                 // Foreign key on kitti_registrations table
+            'id',                 // Foreign key on users table
+            'kitti_registration_id', // Local key on discontinue_requests table
+            'user_id'             // Local key on kitti_registrations table
+        );
     }
 }

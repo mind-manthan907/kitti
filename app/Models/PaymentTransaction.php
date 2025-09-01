@@ -76,7 +76,7 @@ class PaymentTransaction extends Model
      */
     public function getPaymentMethodDisplay(): string
     {
-        return match($this->payment_method) {
+        return match ($this->payment_method) {
             'gateway' => 'Payment Gateway',
             'upi' => 'UPI Payment',
             'qr' => 'QR Code Payment',
@@ -106,5 +106,10 @@ class PaymentTransaction extends Model
     public function scopeFailed($query)
     {
         return $query->where('status', 'failed');
+    }
+
+    public function paymentTransactions()
+    {
+        return $this->hasMany(PaymentTransaction::class, 'kitti_registration_id');
     }
 }

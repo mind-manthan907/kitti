@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Razorpay\Api\Api;
 
 class KittiRegistrationController extends Controller
 {
@@ -38,27 +39,17 @@ class KittiRegistrationController extends Controller
     public function showInvestmentPlanForm()
     {
         $user = Auth::user();
-        
-        // Check if user has verified KYC
-        if (!$user->hasVerifiedKyc()) {
-            if (!$user->hasKycDocument()) {
-                return redirect()->route('user.profile.kyc.create')
-                    ->with('warning', 'Please complete your KYC verification before creating an investment plan.');
-            } else {
-                return redirect()->route('user.profile.kyc.index')
-                    ->with('warning', 'Your KYC is pending verification. Please wait for admin approval.');
-            }
-        }
-        
+
         // Check if user already has an active investment
         $activeInvestment = $user->kittiRegistrations()
             ->where('status', 'approved')
             ->first();
+            
         if ($activeInvestment) {
             return redirect()->route('user.dashboard')
                 ->with('warning', 'You already have an active investment plan.');
         }
-        
+
         // Get all active investment plans
         $plans = \App\Models\InvestmentPlan::active()->orderBy('amount')->get();
         return view('registration.investment_plan', compact('user', 'plans'));
@@ -70,22 +61,11 @@ class KittiRegistrationController extends Controller
     public function storeInvestmentPlan(Request $request)
     {
         $user = Auth::user();
-        
-        // Check if user has verified KYC
-        if (!$user->hasVerifiedKyc()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Please complete your KYC verification before creating an investment plan.'
-            ], 422);
-        }
-        
+
         $request->validate([
             'plan_id' => 'required|exists:investment_plans,id',
             'duration_months' => 'required|integer|min:6|max:60',
         ]);
-
-        // Ensure duration_months is properly cast to integer to prevent Carbon::addMonths() errors
-        // Laravel validation doesn't automatically cast values, so we need to do it manually
 
         try {
             // Get the selected plan
@@ -93,7 +73,7 @@ class KittiRegistrationController extends Controller
 
             // Validate duration against plan constraints
             $durationMonths = (int)$request->duration_months;
-            
+
             // Log the values for debugging
             \Log::info('Investment plan creation - duration validation:', [
                 'requested_duration' => $request->duration_months,
@@ -102,19 +82,11 @@ class KittiRegistrationController extends Controller
                 'plan_max_duration' => $plan->max_duration_months,
                 'plan_name' => $plan->name
             ]);
-            
+
             if ($durationMonths < $plan->min_duration_months || $durationMonths > $plan->max_duration_months) {
                 return response()->json([
                     'success' => false,
                     'message' => "Duration must be between {$plan->min_duration_months} and {$plan->max_duration_months} months for this plan."
-                ], 422);
-            }
-
-            // Validate that user has required KYC and bank account information
-            if (!$user->approvedKycDocument) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Please complete your KYC verification first.'
                 ], 422);
             }
 
@@ -128,7 +100,7 @@ class KittiRegistrationController extends Controller
             // Calculate dates
             $startDate = now();
             $maturityDate = $startDate->copy()->addMonths($durationMonths);
-            
+
             // Log the calculated dates for debugging
             \Log::info('Investment plan creation - date calculation:', [
                 'start_date' => $startDate->format('Y-m-d'),
@@ -165,7 +137,6 @@ class KittiRegistrationController extends Controller
                 'message' => 'Investment plan created successfully! Your registration is pending admin approval.',
                 'redirect_url' => route('user.dashboard')
             ]);
-
         } catch (\Exception $e) {
             \Log::error('Error creating investment plan: ' . $e->getMessage(), [
                 'user_id' => $user->id ?? 'null',
@@ -193,7 +164,7 @@ class KittiRegistrationController extends Controller
 
         // Generate OTP for mobile verification
         $otp = rand(100000, 999999);
-        
+
         // Store in session for verification
         session([
             'full_name' => $request->full_name,
@@ -335,7 +306,7 @@ class KittiRegistrationController extends Controller
     public function storeStep5(Request $request)
     {
         \Log::info('storeStep5 called with data:', $request->all());
-        
+
         $request->validate([
             'duration_months' => 'required|integer|min:1|max:60',
         ]);
@@ -347,13 +318,13 @@ class KittiRegistrationController extends Controller
         // Calculate maturity date
         $startDate = now();
         $maturityDate = $startDate->copy()->addMonths((int)$request->duration_months);
-        
+
         \Log::info('Calculated dates:', [
             'start_date' => $startDate->format('Y-m-d'),
             'maturity_date' => $maturityDate->format('Y-m-d'),
             'duration_months' => $request->duration_months
         ]);
-        
+
         session([
             'start_date' => $startDate->format('Y-m-d'),
             'maturity_date' => $maturityDate->format('Y-m-d'),
@@ -416,20 +387,15 @@ class KittiRegistrationController extends Controller
      */
     public function preview()
     {
-        $step1 = session('registration_step1', []);
-        $step2 = session('registration_step2', []);
-        $step3 = session('registration_step3', []);
-        $step4 = session('registration_step4', []);
-        $step5 = session('registration_step5', []);
-        $maturityDate = session('maturity_date');
+        $user = Auth::user();
 
-        if (empty($step1)) {
-            return redirect()->route('registration.create');
-        }
+        $registration = $user->kittiRegistrations()
+            ->where('status', 'approved')
+            ->with('investmentPlan', 'paymentTransactions')
+            ->latest()
+            ->first();
 
-        return view('registration.preview', compact(
-            'step1', 'step2', 'step3', 'step4', 'step5', 'maturityDate'
-        ));
+        return view('registration.preview', compact('registration'));
     }
 
     /**
@@ -437,91 +403,104 @@ class KittiRegistrationController extends Controller
      */
     public function payment(KittiRegistration $registration)
     {
-        if ($registration->status !== 'pending') {
-            return redirect()->route('registration.index')
-                ->with('error', 'Invalid registration status');
+        $api = new Api(env('RAZORPAY_KEY'), env('RAZORPAY_SECRET'));
+        $emi_amount = $registration->investmentPlan->amount / $registration->investmentPlan->emi_months;
+
+        // Find existing pending transaction
+        $transaction = $registration->paymentTransactions()->where('status', 'pending')->latest()->first();
+
+        if (! $transaction) {
+            // Create new Razorpay order
+            $razorpayOrder = $api->order->create([
+                'receipt'  => 'order_' . time(),
+                'amount'   => $emi_amount * 100,
+                'currency' => 'INR',
+            ]);
+
+            $transaction = PaymentTransaction::create([
+                'kitti_registration_id' => $registration->id,
+                'transaction_reference' => $razorpayOrder['receipt'], // internal
+                'gateway_transaction_id' => $razorpayOrder['id'],    // Razorpay order id
+                'amount'                => $emi_amount,
+                'payment_method'        => 'gateway',
+                'status'                => 'pending',
+                'payment_initiated_at'  => now(),
+            ]);
+        } else {
+            // Fetch existing Razorpay order using correct column
+            $razorpayOrder = $api->order->fetch($transaction->gateway_transaction_id);
         }
 
-        return view('registration.payment', compact('registration'));
-    }
-
-    /**
-     * Process payment
-     */
-    public function processPayment(Request $request, KittiRegistration $registration)
-    {
-        $request->validate([
-            'payment_method' => 'required|in:gateway,upi,qr',
-        ]);
-
-        // Create payment transaction
-        $transaction = PaymentTransaction::create([
-            'kitti_registration_id' => $registration->id,
-            'transaction_reference' => 'TXN' . time() . rand(1000, 9999),
-            'amount' => $registration->getPaymentAmount(),
-            'payment_method' => $request->payment_method,
-            'status' => 'pending',
-            'payment_initiated_at' => now(),
-        ]);
-
-        // Update registration status
-        $registration->update(['status' => 'payment_pending']);
-
-        // Send email notifications
-        $this->sendPaymentInitiatedEmail($registration, $transaction);
-
-        return response()->json([
-            'success' => true,
-            'transaction_id' => $transaction->id,
-            'redirect_url' => $this->getPaymentRedirectUrl($request->payment_method, $transaction)
+        return view('registration.payment', [
+            'registration'  => $registration,
+            'razorpayOrder' => $razorpayOrder,
+            'transaction'   => $transaction,
         ]);
     }
 
+
     /**
-     * Payment success callback
+     * Handle successful payment
      */
     public function paymentSuccess(Request $request)
     {
-        $transactionId = $request->input('transaction_id');
-        $transaction = PaymentTransaction::findOrFail($transactionId);
+        try {
+            // Verify signature
+            $generatedSignature = hash_hmac(
+                'sha256',
+                $request->razorpay_order_id . "|" . $request->razorpay_payment_id,
+                config('services.razorpay.secret')
+            );
 
-        // Update transaction status
-        $transaction->update([
-            'status' => 'success',
-            'payment_completed_at' => now(),
-        ]);
+            if ($generatedSignature !== $request->razorpay_signature) {
+                throw new \Exception("Invalid payment signature");
+            }
 
-        // Update registration status
-        $registration = $transaction->registration;
-        $registration->update(['status' => 'payment_verified']);
+            // Find transaction by order_id
+            $transaction = PaymentTransaction::where('gateway_transaction_id', $request->razorpay_order_id)->first();
 
-        // Set auto-confirm time
-        $autoConfirmHours = SystemConfig::getValue('auto_confirm_hours', 24);
-        $registration->update([
-            'auto_confirm_at' => now()->addHours($autoConfirmHours)
-        ]);
+            if (! $transaction) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Transaction not found',
+                ], 404);
+            }
 
-        // Send success notifications
-        $this->sendPaymentSuccessEmail($registration, $transaction);
-        $this->sendAdminNotification($registration, $transaction);
+            // Update transaction
+            $transaction->update([
+                'status'                 => 'success',
+                'transaction_reference'  => $request->razorpay_payment_id,
+                'gateway_transaction_id' => $request->razorpay_order_id,
+                'payment_completed_at'   => now(),
+            ]);
 
-        return view('registration.payment_success', compact('registration', 'transaction'));
+            return response()->json([
+                'success' => true,
+                'redirect_url' => route('registration.preview', $transaction->kitti_registration_id),
+            ]);
+        } catch (\Exception $e) {
+            $this->paymentFailure($request);
+            return response()->json([
+                'success' => false,
+                'message' => 'Payment verification failed.',
+            ], 400);
+        }
     }
 
     /**
-     * Payment failure callback
+     * On payment failure
      */
-    public function paymentFailure(Request $request)
+    protected function paymentFailure(Request $request)
     {
-        $transactionId = $request->input('transaction_id');
-        $transaction = PaymentTransaction::findOrFail($transactionId);
+        $transaction = PaymentTransaction::where('gateway_transaction_id', $request->razorpay_order_id)->first();
 
-        $transaction->update([
-            'status' => 'failed',
-            'error_message' => $request->input('error_message', 'Payment failed'),
+        if ($transaction) {
+            $transaction->update(['status' => 'failed']);
+        }
+
+        return response()->json([
+            'redirect_url' => route('registration.preview', $transaction->registration->id),
         ]);
-
-        return view('registration.payment_failure', compact('transaction'));
     }
 
     /**
@@ -529,7 +508,7 @@ class KittiRegistrationController extends Controller
      */
     private function getPaymentRedirectUrl(string $method, PaymentTransaction $transaction): string
     {
-        return match($method) {
+        return match ($method) {
             'gateway' => route('payment.gateway', $transaction->id),
             'upi' => route('payment.upi', $transaction->id),
             'qr' => route('payment.qr', $transaction->id),
@@ -573,7 +552,7 @@ class KittiRegistrationController extends Controller
         }
 
         $adminEmail = SystemConfig::getValue('admin_email', 'admin@kitti.com');
-        
+
         // TODO: Implement email sending
         // Mail::to($adminEmail)->send(new AdminNotificationMail($registration, $transaction));
     }
@@ -622,21 +601,27 @@ class KittiRegistrationController extends Controller
             // If user chose to invest, create the registration
             if (!session('skipInvestmentPlan', false)) {
                 \Log::info('User chose to invest, creating registration');
-                
+
                 // Validate that all required investment fields are present
                 $requiredFields = [
-                    'plan_amount', 'document_type', 'document_path', 'duration_months',
-                    'start_date', 'maturity_date', 'bank_account_holder_name',
-                    'bank_account_number', 'bank_ifsc_code'
+                    'plan_amount',
+                    'document_type',
+                    'document_path',
+                    'duration_months',
+                    'start_date',
+                    'maturity_date',
+                    'bank_account_holder_name',
+                    'bank_account_number',
+                    'bank_ifsc_code'
                 ];
-                
+
                 $missingFields = [];
                 foreach ($requiredFields as $field) {
                     if (empty(session($field))) {
                         $missingFields[] = $field;
                     }
                 }
-                
+
                 if (!empty($missingFields)) {
                     \Log::warning('Missing required investment fields', ['missing_fields' => $missingFields]);
                     return response()->json([
@@ -644,7 +629,7 @@ class KittiRegistrationController extends Controller
                         'message' => 'Missing required investment information: ' . implode(', ', $missingFields)
                     ], 400);
                 }
-                
+
                 $registrationData = [
                     'user_id' => $user->id,
                     'plan_id' => session('plan_id'), // Add plan_id from session
@@ -669,10 +654,10 @@ class KittiRegistrationController extends Controller
                 ];
 
                 $registration = KittiRegistration::create($registrationData);
-                
+
                 // Clear session data
                 $this->clearRegistrationSession();
-                
+
                 return response()->json([
                     'success' => true,
                     'message' => 'Account created successfully! Your investment registration is pending admin approval.',
@@ -682,20 +667,19 @@ class KittiRegistrationController extends Controller
                 \Log::info('User skipped investment plan, only creating user account');
                 // User skipped investment plan - just create the user account
                 $this->clearRegistrationSession();
-                
+
                 return response()->json([
                     'success' => true,
                     'message' => 'Account created successfully! You can join investment plans later from your dashboard.',
                     'redirect_url' => route('auth.login')
                 ]);
             }
-
         } catch (\Exception $e) {
             \Log::error('Account creation failed:', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
-            
+
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to create account: ' . $e->getMessage()
@@ -758,9 +742,19 @@ class KittiRegistrationController extends Controller
     {
         // Clear all registration session data
         session()->forget([
-            'full_name', 'mobile', 'email', 'plan_amount', 'document_path',
-            'duration_months', 'start_date', 'maturity_date', 'bank_account_holder_name',
-            'bank_account_number', 'bank_ifsc_code', 'upi_id', 'terms_accepted',
+            'full_name',
+            'mobile',
+            'email',
+            'plan_amount',
+            'document_path',
+            'duration_months',
+            'start_date',
+            'maturity_date',
+            'bank_account_holder_name',
+            'bank_account_number',
+            'bank_ifsc_code',
+            'upi_id',
+            'terms_accepted',
             'skipInvestmentPlan'
         ]);
     }

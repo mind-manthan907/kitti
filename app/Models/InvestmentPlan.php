@@ -19,6 +19,7 @@ class InvestmentPlan extends Model
         'is_active',
         'min_duration_months',
         'max_duration_months',
+        'emi_months'
     ];
 
     protected $casts = [
@@ -49,7 +50,7 @@ class InvestmentPlan extends Model
      */
     public function getMonthlyDueAttribute()
     {
-        return $this->amount / $this->duration_months;
+        return $this->amount / $this->emi_months;
     }
 
     /**
@@ -89,6 +90,11 @@ class InvestmentPlan extends Model
     public function getFormattedAmountAttribute()
     {
         return '₹' . number_format($this->amount, 0);
+    }
+
+    public function getFormattedTargetAmountAttribute()
+    {
+        return '₹' . number_format($this->amount + ($this->amount * $this->interest_rate) /100 , 0);
     }
 
     /**

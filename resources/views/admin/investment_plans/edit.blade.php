@@ -85,6 +85,17 @@
                                 class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">{{ old('description', $investmentPlan->description ?? '') }}</textarea>
                             <p class="text-red-500 text-sm mt-1 error-description"></p>
                         </div>
+                    </div>
+
+                    <div class="mt-3 grid grid-cols-1 gap-6 sm:grid-cols-2">
+                        <div>
+                            <label for="emi_months" class="block text-sm font-medium text-gray-700">Emi Months</label>
+                            <select id="emi_months" name="emi_months"
+                                class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                                <option value="10" selected>10 Months</option>
+                            </select>
+                            <p class="text-red-500 text-sm mt-1 error-emi_months"></p>
+                        </div>
 
                         <div class="flex items-center">
                             <input
@@ -96,7 +107,6 @@
                                 class="h-4 w-4 text-indigo-600 border-gray-300 rounded">
                             <label for="is_active" class="ml-2 block text-sm text-gray-900">Active</label>
                         </div>
-
                     </div>
                 </div>
             </div>

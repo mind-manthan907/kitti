@@ -104,7 +104,7 @@
     <div class="bg-white rounded-lg shadow p-6 mb-6">
         <div class="flex items-center justify-between mb-4">
             <h2 class="text-lg font-medium text-gray-900">Investment Plans</h2>
-            @if($user->hasVerifiedKyc() && $user->hasBankAccount())
+            @if(($user->hasVerifiedKyc() || $user->hasPendingKycDocument()) && $user->hasBankAccount())
             <a href="{{ route('registration.investment-plan') }}" class="bg-golden-500 hover:bg-golden-700 text-white px-4 py-2 rounded-md text-sm font-medium">
                 <i class="fas fa-plus mr-2"></i>Create New Plan
             </a>
@@ -132,13 +132,8 @@
                     </div>
                     <div class="text-right">
                         <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full {{ $registration->status === 'approved' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800' }}">
-                            {{ ucfirst($registration->status) }}
+                            Status : {{ ucfirst($registration->status) }}
                         </span>
-                        <div class="mt-1">
-                            <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full {{ $registration->payment_status_badge_class }}">
-                                Payment: {{ ucfirst($registration->payment_status) }}
-                            </span>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -151,7 +146,7 @@
             </div>
             <h3 class="text-lg font-medium text-gray-900 mb-2">No Investment Plans</h3>
             <p class="text-gray-500 mb-4">Start your investment journey by creating a new plan</p>
-            @if($user->hasVerifiedKyc() && $user->hasBankAccount())
+            @if(($user->hasVerifiedKyc() || $user->hasPendingKycDocument()) && $user->hasBankAccount())
             <a href="{{ route('registration.investment-plan') }}"
                 class="bg-golden-500 hover:bg-golden-700 text-white px-6 py-2 rounded-md text-sm font-medium">
                 <i class="fas fa-plus mr-2"></i>Create First Plan
@@ -226,7 +221,7 @@
                             <dt class="text-sm font-medium text-gray-500 truncate">Total Investment</dt>
                             @if($activeRegistration)
                             <dd class="text-lg font-medium text-gray-900">
-                                ₹{{ number_format($activeRegistration->getPaymentAmount()) }}
+                                ₹{{ number_format($activeRegistration->plan_amount) }}
                             </dd>
                             @else
                             <dd class="text-lg font-medium text-gray-900">
@@ -275,7 +270,7 @@
                             <dt class="text-sm font-medium text-gray-500 truncate">Monthly Due</dt>
                             <dd class="text-lg font-medium text-gray-900">
                                 @if($activeRegistration)
-                                ₹{{ number_format($activeRegistration->getPaymentAmount()/ 10) }}
+                                ₹{{ number_format($activeRegistration->investmentPlan->amount / $activeRegistration->investmentPlan->emi_months) }}
                                 @else
                                 N/A
                                 @endif
@@ -344,7 +339,9 @@
                         <div class="text-xs text-gray-400">After {{ $activeRegistration->duration_months }} months</div>
                     </div>
                     <div class="text-center">
-                        <div class="text-3xl font-bold text-blue-600">₹{{ number_format($activeRegistration->plan_amount - $activeRegistration->getPaymentAmount()) }}</div>
+                        <div class="text-3xl font-bold text-blue-600">
+                            ₹{{ ($activeRegistration->investmentPlan->amount * $activeRegistration->investmentPlan->interest_rate) / 100 }}
+                        </div>
                         <div class="text-sm text-gray-500">Expected Returns</div>
                     </div>
                     <div class="text-center">
@@ -366,47 +363,95 @@
             </div>
             <div class="border-t border-gray-200 p-6">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {{-- Payment Schedule --}}
                     <div>
-                        <h4 class="text-lg font-medium text-gray-900 mb-4">Payment Schedule</h4>
+                        <h4 class="text-lg font-semibold text-gray-900 mb-4">Payment Schedule</h4>
                         <div class="space-y-3">
                             @php
                             $startDate = \Carbon\Carbon::parse($activeRegistration->start_date);
-                            $totalPayments = 10; // 10 months payment for 12 months benefit
+                            $totalPayments = $activeRegistration->investmentPlan->emi_months;
+
+                            // Successful payments sorted by date
+                            $paidTransactions = collect($activeRegistration->paymentTransactions ?? [])
+                            ->where('status', 'success')
+                            ->sortBy('payment_completed_at')
+                            ->values();
+
+                            $firstUnpaidId = null;
                             @endphp
-                            @for($i = 0; $i < $totalPayments; $i++)
+
+                            @for ($i = 0; $i < $totalPayments; $i++)
                                 @php
                                 $paymentDate=$startDate->copy()->addMonths($i);
-                                $isOverdue = $paymentDate->isPast() && !$activeRegistration->paymentTransactions()->whereMonth('payment_completed_at', $paymentDate->month)->whereYear('payment_completed_at', $paymentDate->year)->where('status', 'success')->exists();
+                                $payment = $paidTransactions->shift(); // assign payment if exists
+
+                                if ($payment) {
+                                $status = 'paid';
+                                $paymentDt = $payment->payment_completed_at instanceof \Carbon\Carbon
+                                ? $payment->payment_completed_at
+                                : \Carbon\Carbon::parse($payment->payment_completed_at);
+                                $paymentAmount = $payment->amount;
+                                } elseif ($paymentDate->isPast()) {
+                                $status = 'overdue';
+                                } else {
+                                $status = 'unpaid';
+                                }
+
+                                if ($status !== 'paid' && $firstUnpaidId === null) {
+                                $firstUnpaidId = 'payment-month-' . ($i + 1);
+                                $nextPaymentDate = $paymentDate;
+                                }
                                 @endphp
-                                <div class="flex items-center justify-between p-3 {{ $isOverdue ? 'bg-red-50 border border-red-200 rounded' : 'bg-gray-50 border border-gray-200 rounded' }}">
-                                    <div>
-                                        <div class="font-medium text-gray-900">Month {{ $i + 1 }}</div>
-                                        <div class="text-sm text-gray-500">{{ $paymentDate->format('M d, Y') }}</div>
-                                    </div>
-                                    <div class="text-right">
-                                        <div class="font-medium text-gray-900">₹{{ number_format($activeRegistration->getPaymentAmount() / 10) }}</div>
-                                        @if($isOverdue)
-                                        <div class="text-xs text-red-600">Overdue</div>
-                                        @elseif(!$isOverdue)
-                                        <div class="text-xs text-orange-400">Unpaid</div>
+
+                                <div id="payment-month-{{ $i + 1 }}"
+                                    class="flex flex-col space-y-1 p-3 rounded border
+                     @if($status === 'paid') bg-green-50 border-green-200
+                     @elseif($status === 'overdue') bg-red-50 border-red-200
+                     @else bg-gray-50 border-gray-200 @endif">
+
+                                    <div class="flex justify-between items-center">
+                                        <span class="font-medium text-gray-900">Month {{ $i + 1 }} - {{ $paymentDate->format('M Y') }}</span>
+                                        @if($status === 'paid')
+                                        <span class="text-sm text-green-600">Paid</span>
+                                        @elseif($status === 'overdue')
+                                        <span class="text-xs text-red-600">Overdue</span>
                                         @else
-                                        <div class="text-xs text-green-600">Paid</div>
+                                        <span class="text-xs text-orange-500">Unpaid</span>
                                         @endif
                                     </div>
+
+                                    <div class="text-sm text-gray-500">{{ $paymentDate->format('M d, Y') }}</div>
+
+                                    @if($status === 'paid')
+                                    <div class="text-sm text-green-600">
+                                        Paid on {{ $paymentDt->format('M d, Y') }} - ₹{{ number_format($paymentAmount) }}
+                                    </div>
+                                    @endif
                                 </div>
                                 @endfor
                         </div>
                     </div>
+
+                    {{-- Pay Monthly Due --}}
                     <div>
-                        <h4 class="text-lg font-medium text-gray-900 mb-4">Pay Monthly Due</h4>
+                        <h4 class="text-lg font-semibold text-gray-900 mb-4">Pay Monthly Due</h4>
                         <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                            <div class="text-sm text-blue-800 mb-4">
-                                <strong>Next Payment:</strong> ₹{{ number_format($activeRegistration->getPaymentAmount() /10) }}<br>
-                                <strong>Due Date:</strong> {{ $nextPaymentDate ? \Carbon\Carbon::parse($nextPaymentDate)->format('M d, Y') : 'N/A' }}
+                            @php
+                            $emiAmount = $activeRegistration->plan_amount / $activeRegistration->investmentPlan->emi_months;
+                            @endphp
+
+                            @if(isset($nextPaymentDate))
+                            <div class="text-sm text-blue-800 mb-4 space-y-1">
+                                <div><strong>Next Payment:</strong> ₹{{ number_format($emiAmount) }}</div>
+                                <div><strong>Due Date:</strong> {{ $nextPaymentDate->format('M d, Y') }}</div>
                             </div>
-                            <a href="{{ route('registration.payment', $activeRegistration) }}" class="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium text-center block">
+                            <a href="{{ route('registration.preview', $activeRegistration) }}"
+                                class="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium text-center block">
                                 <i class="fas fa-credit-card mr-2"></i>Pay Now
                             </a>
+                            @else
+                            <div class="text-sm text-blue-800 mb-4">All EMIs are paid ✅</div>
+                            @endif
                         </div>
                     </div>
                 </div>

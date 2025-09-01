@@ -16,7 +16,7 @@ return new class extends Migration
             
             // Step 1: Personal Information
             $table->string('full_name');
-            $table->string('mobile')->unique();
+            $table->string('mobile');
             $table->string('email');
             $table->boolean('mobile_verified')->default(false);
             $table->boolean('email_verified')->default(false);
@@ -25,8 +25,8 @@ return new class extends Migration
             $table->enum('plan_amount', ['1000', '10000', '50000', '100000']);
             
             // Step 3: Documents
-            $table->string('document_type'); // 'aadhar' or 'pan'
-            $table->string('document_file_path');
+            $table->string('document_type')->nullable();; // 'aadhar' or 'pan'
+            $table->string('document_file_path')->nullable();;
             $table->string('document_number')->nullable();
             
             // Step 4: Duration

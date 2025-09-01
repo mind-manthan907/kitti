@@ -6,15 +6,27 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\InvestmentPlan;
 use Illuminate\Support\Facades\Validator;
+use App\Models\SystemConfig;
 
 class InvestmentPlanController extends Controller
 {
     /**
      * Display a listing of investment plans
      */
+
+    public function landingPage()
+    {
+        $company_name = SystemConfig::getValue('company_name', 'KITTI Investment Platform');
+        $company_address = SystemConfig::getValue('company_address', 'Mumbai, Maharashtra, India');
+
+        $plans = InvestmentPlan::orderBy('amount')->paginate(10);
+        return view('welcome', compact('plans','company_name','company_address'));
+    }
+
     public function index()
     {
         $plans = InvestmentPlan::orderBy('amount')->paginate(10);
+
         return view('admin.investment_plans.index', compact('plans'));
     }
 
@@ -31,10 +43,12 @@ class InvestmentPlanController extends Controller
      */
     public function store(Request $request)
     {
+        
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255|unique:investment_plans',
             'amount' => 'required|numeric|min:1000',
             'duration_months' => 'required|integer|min:1|max:120',
+            'emi_months' => 'required|integer|min:1|max:12',
             'interest_rate' => 'required|numeric|min:0|max:100',
             'description' => 'nullable|string|max:1000',
             'min_duration_months' => 'required|integer|min:1|max:120',
@@ -50,12 +64,14 @@ class InvestmentPlanController extends Controller
 
         try {
             InvestmentPlan::create($request->all());
-            
+
             return response()->json([
                 'success' => true,
                 'message' => 'Investment plan created successfully!'
             ]);
         } catch (\Exception $e) {
+            \Log::error('Exception caught: ' . $e->getMessage());
+
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to create investment plan. Please try again.'
@@ -80,6 +96,7 @@ class InvestmentPlanController extends Controller
             'name' => 'required|string|max:255|unique:investment_plans,name,' . $investmentPlan->id,
             'amount' => 'required|numeric|min:1000',
             'duration_months' => 'required|integer|min:1|max:120',
+            'emi_months' => 'required|integer|min:1|max:12',
             'interest_rate' => 'required|numeric|min:0|max:100',
             'description' => 'nullable|string|max:1000',
             'min_duration_months' => 'required|integer|min:1|max:120',
@@ -95,7 +112,7 @@ class InvestmentPlanController extends Controller
 
         try {
             $investmentPlan->update($request->all());
-            
+
             return response()->json([
                 'success' => true,
                 'message' => 'Investment plan updated successfully!'
@@ -117,9 +134,9 @@ class InvestmentPlanController extends Controller
             $investmentPlan->update([
                 'is_active' => !$investmentPlan->is_active
             ]);
-            
+
             $status = $investmentPlan->is_active ? 'activated' : 'deactivated';
-            
+
             return response()->json([
                 'success' => true,
                 'message' => "Investment plan {$status} successfully!",
@@ -146,9 +163,9 @@ class InvestmentPlanController extends Controller
                     'message' => 'Cannot delete plan as it is being used by existing registrations.'
                 ], 422);
             }
-            
+
             $investmentPlan->delete();
-            
+
             return response()->json([
                 'success' => true,
                 'message' => 'Investment plan deleted successfully!'
